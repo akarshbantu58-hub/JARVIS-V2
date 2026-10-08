@@ -1,1478 +1,292 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#04070d" />
-<meta name="description" content="J.A.R.V.I.S - Personal AI Assistant" />
-<title>J.A.R.V.I.S</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
-<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"JARVIS","short_name":"JARVIS","start_url":".","display":"standalone","background_color":"%2304070d","theme_color":"%2304070d","icons":[{"src":"data:image/svg%2Bxml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%2304070d%22/><text x=%2250%22 y=%2260%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22%2300e5ff%22 font-family=%22Orbitron%22>J</text></svg>","sizes":"192x192","type":"image/svg+xml"}]}' />
-<style>
-:root{
-  --bg-0:#04070d;
-  --bg-1:#080d1a;
-  --bg-2:#0d1424;
-  --glass:rgba(14,22,40,.55);
-  --glass-strong:rgba(18,28,50,.75);
-  --glass-border:rgba(0,229,255,.18);
-  --glass-border-strong:rgba(0,229,255,.35);
-  --accent:#00e5ff;
-  --accent-2:#7c4dff;
-  --accent-3:#ff2d95;
-  --accent-warm:#ffb648;
-  --text:#e8f4ff;
-  --text-dim:#8aa2c2;
-  --text-mute:#5a6d8a;
-  --success:#3ddc97;
-  --danger:#ff5470;
-  --warn:#ffb648;
-  --radius-sm:10px;
-  --radius:16px;
-  --radius-lg:22px;
-  --radius-xl:28px;
-  --shadow-glow:0 0 40px rgba(0,229,255,.25),0 0 80px rgba(124,77,255,.12);
-  --shadow-card:0 10px 40px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.35);
-  --blur:22px;
-  --transition:cubic-bezier(.22,1,.36,1);
-}
-[data-theme="light"]{
-  --bg-0:#eef4fb;
-  --bg-1:#e2ecf7;
-  --bg-2:#d6e3f2;
-  --glass:rgba(255,255,255,.55);
-  --glass-strong:rgba(255,255,255,.75);
-  --glass-border:rgba(0,120,180,.18);
-  --glass-border-strong:rgba(0,120,180,.35);
-  --text:#0b1830;
-  --text-dim:#3d5273;
-  --text-mute:#6b7f9c;
-  --shadow-card:0 10px 30px rgba(30,60,120,.15),0 2px 6px rgba(30,60,120,.08);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;background:var(--bg-0);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;user-select:none;overscroll-behavior:none;}
-body{touch-action:manipulation;}
-input,textarea,[contenteditable]{user-select:text;-webkit-user-select:text;}
-button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;outline:none;}
-a{color:var(--accent);text-decoration:none;}
-
-/* Background canvases */
-#bgCanvas,#particleCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
-#particleCanvas{z-index:1;}
-.aurora{position:fixed;inset:-20%;z-index:0;pointer-events:none;filter:blur(80px);opacity:.55;}
-.aurora .blob{position:absolute;border-radius:50%;mix-blend-mode:screen;animation:float 22s ease-in-out infinite;}
-.aurora .b1{width:55vmax;height:55vmax;background:radial-gradient(circle,#00e5ff,transparent 65%);top:-15%;left:-10%;}
-.aurora .b2{width:50vmax;height:50vmax;background:radial-gradient(circle,#7c4dff,transparent 65%);bottom:-20%;right:-10%;animation-delay:-8s;}
-.aurora .b3{width:40vmax;height:40vmax;background:radial-gradient(circle,#ff2d95,transparent 65%);top:30%;right:20%;animation-delay:-14s;}
-@keyframes float{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(6vw,-4vh) scale(1.1);}66%{transform:translate(-4vw,6vh) scale(.95);}}
-
-/* App shell */
-#app{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;height:100dvh;width:100vw;}
-.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(180deg,rgba(4,7,13,.7),rgba(4,7,13,0));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:5;flex-shrink:0;}
-.brand{display:flex;align-items:center;gap:10px;font-family:'Orbitron',sans-serif;font-weight:800;letter-spacing:4px;color:var(--accent);text-shadow:0 0 10px rgba(0,229,255,.5);}
-.brand .core{width:26px;height:26px;position:relative;display:inline-block;}
-.brand .core::before,.brand .core::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);box-shadow:0 0 12px var(--accent),inset 0 0 8px var(--accent);animation:spin 6s linear infinite;}
-.brand .core::after{inset:5px;border-color:var(--accent-2);box-shadow:0 0 8px var(--accent-2);animation-duration:4s;animation-direction:reverse;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.topbar .status{display:flex;gap:14px;color:var(--text-dim);font-size:12px;flex-wrap:wrap;}
-.topbar .status span{display:inline-flex;align-items:center;gap:5px;}
-.topbar .spacer{flex:1;}
-.icon-btn{width:38px;height:38px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:var(--text);background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .25s var(--transition);}
-.icon-btn:hover,.icon-btn:active{background:var(--glass-strong);border-color:var(--glass-border-strong);box-shadow:0 0 16px rgba(0,229,255,.25);transform:translateY(-1px);}
-.icon-btn.active{color:var(--accent);border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,.4);}
-
-/* Main layout */
-.main{flex:1;display:flex;min-height:0;position:relative;}
-.sidenav{width:76px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;padding:10px 10px;background:var(--glass);border-right:1px solid var(--glass-border);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));overflow-y:auto;}
-.sidenav::-webkit-scrollbar{width:0;}
-.nav-item{width:56px;height:56px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);font-size:9px;gap:3px;background:transparent;border:1px solid transparent;transition:all .25s var(--transition);position:relative;flex-shrink:0;}
-.nav-item i{font-size:18px;}
-.nav-item:hover{background:var(--glass-strong);color:var(--text);}
-.nav-item.active{background:linear-gradient(135deg,rgba(0,229,255,.22),rgba(124,77,255,.18));color:var(--accent);border-color:var(--glass-border-strong);box-shadow:0 0 18px rgba(0,229,255,.35);}
-.nav-item.active::before{content:"";position:absolute;left:-11px;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 8px var(--accent);}
-
-.content{flex:1;position:relative;overflow:hidden;}
-.page{position:absolute;inset:0;padding:16px;overflow-y:auto;overflow-x:hidden;display:none;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;}
-.page::-webkit-scrollbar{width:8px;height:8px;}
-.page::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);border-radius:4px;}
-.page.active{display:flex;animation:pageIn .5s var(--transition);}
-@keyframes pageIn{from{opacity:0;transform:translateY(12px) scale(.98);}to{opacity:1;transform:none;}}
-
-/* Glass card */
-.glass{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-lg);backdrop-filter:blur(var(--blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--blur)) saturate(180%);box-shadow:var(--shadow-card);position:relative;overflow:hidden;}
-.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,0) 40%);pointer-events:none;}
-.glass.hover:hover{border-color:var(--glass-border-strong);box-shadow:var(--shadow-card),0 0 24px rgba(0,229,255,.2);}
-
-/* HOME */
-.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
-.home-hero{grid-column:1/-1;padding:24px 26px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;}
-.home-hero .greet{color:var(--text-dim);font-size:14px;letter-spacing:2px;text-transform:uppercase;}
-.home-hero .title{font-family:'Orbitron',sans-serif;font-size:clamp(28px,5vw,54px);font-weight:800;letter-spacing:8px;background:linear-gradient(90deg,#00e5ff,#7c4dff,#ff2d95,#00e5ff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 8s linear infinite;}
-@keyframes shine{to{background-position:300% 0;}}
-.home-hero .sub{color:var(--text);font-size:16px;opacity:.85;}
-.hero-clock{font-family:'Orbitron',sans-serif;font-size:clamp(40px,8vw,88px);font-weight:700;letter-spacing:4px;color:var(--accent);text-shadow:0 0 20px rgba(0,229,255,.5);line-height:1;}
-.hero-date{color:var(--text-dim);font-size:14px;letter-spacing:2px;}
-.mini{padding:16px;display:flex;flex-direction:column;gap:6px;min-height:110px;}
-.mini .label{color:var(--text-dim);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
-.mini .val{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:600;color:var(--text);}
-.mini .val.small{font-size:14px;}
-.mini .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px;}
-.mini .bar > i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 0 8px var(--accent);transition:width .6s var(--transition);}
-
-/* CHAT */
-.chat-wrap{flex:1;display:flex;gap:14px;min-height:0;}
-.chat-side{width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;padding:12px;overflow-y:auto;}
-.chat-side h4{margin:6px 4px;font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;}
-.chat-list-item{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid transparent;cursor:pointer;font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:8px;transition:all .2s;}
-.chat-list-item:hover{background:var(--glass-strong);color:var(--text);}
-.chat-list-item.active{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.1));border-color:var(--glass-border-strong);color:var(--text);}
-.chat-list-item .pin{margin-left:auto;opacity:.6;font-size:11px;}
-.chat-main{flex:1;display:flex;flex-direction:column;min-width:0;padding:0;overflow:hidden;}
-.chat-toolbar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--glass-border);flex-wrap:wrap;align-items:center;}
-.chat-toolbar input.search{flex:1;min-width:140px;background:rgba(255,255,255,.05);border:1px solid var(--glass-border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;}
-.chat-scroll{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;}
-.msg{display:flex;gap:12px;max-width:92%;animation:msgIn .35s var(--transition);}
-@keyframes msgIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-.msg.user{align-self:flex-end;flex-direction:row-reverse;}
-.msg .avatar{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04070d;box-shadow:0 0 12px rgba(0,229,255,.35);}
-.msg.user .avatar{background:linear-gradient(135deg,var(--accent-3),var(--accent-warm));box-shadow:0 0 12px rgba(255,45,149,.35);color:#fff;}
-.bubble{padding:12px 16px;border-radius:18px;background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);line-height:1.55;font-size:14.5px;position:relative;word-wrap:break-word;overflow-wrap:anywhere;}
-.msg.user .bubble{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,77,255,.1));border-color:var(--glass-border-strong);}
-.bubble pre{background:rgba(0,0,0,.45);border:1px solid var(--glass-border);border-radius:12px;padding:12px;overflow-x:auto;margin:8px 0;font-family:'JetBrains Mono',monospace;font-size:13px;}
-.bubble code{font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,.35);padding:1px 6px;border-radius:5px;font-size:.92em;}
-.bubble pre code{background:none;padding:0;}
-.bubble table{border-collapse:collapse;margin:8px 0;font-size:13px;}
-.bubble th,.bubble td{border:1px solid var(--glass-border);padding:6px 10px;text-align:left;}
-.bubble th{background:rgba(0,229,255,.12);}
-.bubble ul,.bubble ol{padding-left:22px;margin:6px 0;}
-.bubble a{border-bottom:1px dashed var(--accent);}
-.msg-actions{display:flex;gap:6px;margin-top:6px;opacity:0;transition:opacity .2s;}
-.msg:hover .msg-actions{opacity:1;}
-.msg-actions button{font-size:11px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.05);color:var(--text-dim);border:1px solid var(--glass-border);}
-.msg-actions button:hover{color:var(--accent);border-color:var(--accent);}
-.thinking{display:inline-flex;gap:5px;align-items:center;}
-.thinking span{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulseDot 1.2s infinite;box-shadow:0 0 8px var(--accent);}
-.thinking span:nth-child(2){animation-delay:.15s;}
-.thinking span:nth-child(3){animation-delay:.3s;}
-@keyframes pulseDot{0%,80%,100%{opacity:.3;transform:scale(.8);}40%{opacity:1;transform:scale(1.15);}}
-.chat-input-bar{padding:12px 14px;border-top:1px solid var(--glass-border);display:flex;gap:10px;align-items:flex-end;background:linear-gradient(0deg,rgba(4,7,13,.6),transparent);}
-.chat-input{flex:1;display:flex;gap:8px;align-items:flex-end;background:var(--glass);border:1px solid var(--glass-border);border-radius:22px;padding:8px 10px 8px 16px;backdrop-filter:blur(14px);}
-.chat-input:focus-within{border-color:var(--accent);box-shadow:0 0 18px rgba(0,229,255,.3);}
-.chat-input textarea{flex:1;background:none;border:none;color:var(--text);font-size:14.5px;resize:none;outline:none;max-height:150px;min-height:24px;padding:6px 0;font-family:inherit;line-height:1.4;}
-.chat-input .send-btn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04070d;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(0,229,255,.5);flex-shrink:0;}
-.chat-input .send-btn:hover{transform:scale(1.08);}
-.chat-input .send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-
-/* VOICE */
-.voice-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;position:relative;min-height:400px;}
-.orb{width:min(60vw,320px);aspect-ratio:1;border-radius:50%;position:relative;background:radial-gradient(circle at 30% 30%,rgba(0,229,255,.7),rgba(124,77,255,.4) 45%,rgba(4,7,13,.6) 75%);box-shadow:0 0 60px rgba(0,229,255,.5),inset 0 0 60px rgba(124,77,255,.4);animation:orbPulse 4s ease-in-out infinite;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.orb::before{content:"";position:absolute;inset:8%;border-radius:50%;border:2px solid rgba(0,229,255,.4);animation:spin 12s linear infinite;}
-.orb::after{content:"";position:absolute;inset:20%;border-radius:50%;border:2px dashed rgba(124,77,255,.6);animation:spin 8s linear infinite reverse;}
-.orb.listening{box-shadow:0 0 80px rgba(0,229,255,.9),inset 0 0 80px rgba(0,229,255,.5);animation:orbPulse 1.2s ease-in-out infinite;}
-.orb.speaking{box-shadow:0 0 80px rgba(255,45,149,.7),inset 0 0 60px rgba(255,45,149,.5);}
-@keyframes orbPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
-.voice-caption{font-family:'Orbitron',sans-serif;color:var(--accent);letter-spacing:3px;font-size:14px;min-height:24px;text-align:center;}
-.voice-transcript{color:var(--text);font-size:16px;text-align:center;max-width:700px;min-height:24px;line-height:1.5;padding:0 20px;}
-.voice-controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
-.voice-controls .icon-btn{width:52px;height:52px;font-size:20px;}
-
-/* CAMERA */
-.camera-wrap{flex:1;display:grid;grid-template-columns:1fr;gap:12px;min-height:0;}
-@media(min-width:900px){.camera-wrap{grid-template-columns:2fr 1fr;}}
-.cam-view{position:relative;background:#000;border-radius:var(--radius-lg);overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center;border:1px solid var(--glass-border);}
-.cam-view video,.cam-view canvas{width:100%;height:100%;object-fit:cover;display:block;}
-.cam-overlay{position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,rgba(0,0,0,.4),transparent 30%);}
-.cam-toolbar{position:absolute;bottom:12px;left:0;right:0;display:flex;gap:10px;justify-content:center;pointer-events:auto;}
-.cam-panel{display:flex;flex-direction:column;gap:12px;padding:16px;overflow-y:auto;}
-.cam-panel h4{margin:0;color:var(--accent);letter-spacing:2px;font-family:'Orbitron';font-size:14px;}
-.cam-thumb{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--glass-border);}
-.cam-thumb img{width:100%;height:100%;object-fit:cover;}
-
-/* FILES */
-.files-drop{padding:40px 20px;border:2px dashed var(--glass-border-strong);border-radius:var(--radius-lg);text-align:center;color:var(--text-dim);transition:all .25s;}
-.files-drop.drag{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--text);}
-.files-drop i{font-size:42px;color:var(--accent);display:block;margin-bottom:10px;}
-.file-list{display:flex;flex-direction:column;gap:8px;}
-.file-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:var(--glass);border:1px solid var(--glass-border);}
-.file-item i{font-size:22px;color:var(--accent);}
-.file-item .name{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.file-item .size{color:var(--text-dim);font-size:12px;}
-
-/* TERMINAL */
-.terminal{flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;font-family:'JetBrains Mono',monospace;}
-.term-output{flex:1;padding:14px 18px;overflow-y:auto;font-size:13.5px;color:var(--text);white-space:pre-wrap;word-wrap:break-word;line-height:1.5;}
-.term-output .prompt{color:var(--accent);}
-.term-output .out{color:var(--text-dim);}
-.term-output .err{color:var(--danger);}
-.term-output .ok{color:var(--success);}
-.term-input-row{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--glass-border);background:rgba(0,0,0,.3);}
-.term-input-row span{color:var(--accent);font-weight:600;}
-.term-input-row input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;}
-
-/* TOOLS */
-.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
-.tool-card{padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;text-align:center;transition:all .25s var(--transition);}
-.tool-card:hover{transform:translateY(-3px);border-color:var(--glass-border-strong);}
-.tool-card i{font-size:26px;color:var(--accent);text-shadow:0 0 12px rgba(0,229,255,.4);}
-.tool-card .n{font-size:13px;font-weight:500;}
-
-/* Modal */
-.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s;}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-.modal-back.show{display:flex;}
-.modal{max-width:600px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;animation:pageIn .35s var(--transition);}
-.modal-head{padding:16px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--glass-border);}
-.modal-head h3{margin:0;font-family:'Orbitron';font-size:15px;letter-spacing:2px;color:var(--accent);flex:1;}
-.modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
-.modal-body label{display:block;font-size:12px;color:var(--text-dim);margin:10px 0 4px;letter-spacing:1px;text-transform:uppercase;}
-.modal-body input,.modal-body select,.modal-body textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--glass-border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:14px;outline:none;}
-.modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus{border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,.25);}
-.modal-body .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-.modal-foot{padding:12px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--glass-border);}
-.btn{padding:9px 16px;border-radius:12px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text);font-size:13px;font-weight:500;transition:all .2s;}
-.btn:hover{border-color:var(--glass-border-strong);background:var(--glass-strong);}
-.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04070d;border-color:transparent;font-weight:600;box-shadow:0 0 14px rgba(0,229,255,.35);}
-.btn.danger{border-color:rgba(255,84,112,.5);color:var(--danger);}
-
-/* Toast */
-.toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
-.toast{background:var(--glass-strong);border:1px solid var(--glass-border-strong);backdrop-filter:blur(14px);padding:10px 16px;border-radius:14px;font-size:13px;box-shadow:var(--shadow-card);animation:toastIn .3s var(--transition);color:var(--text);pointer-events:auto;}
-@keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-
-/* Section head */
-.sect-head{display:flex;align-items:center;gap:10px;padding:0 4px;}
-.sect-head h2{margin:0;font-family:'Orbitron';letter-spacing:3px;font-size:16px;color:var(--accent);text-transform:uppercase;}
-.sect-head .sp{flex:1;}
-
-/* Dashboard specific */
-.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
-.dash-card{padding:16px;display:flex;flex-direction:column;gap:8px;}
-.dash-card h4{margin:0;font-family:'Orbitron';font-size:12px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;display:flex;align-items:center;gap:6px;}
-.list-thin{display:flex;flex-direction:column;gap:6px;font-size:13px;}
-.list-thin .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06);}
-.list-thin .row:last-child{border:none;}
-.chip{display:inline-block;padding:3px 8px;border-radius:8px;font-size:11px;background:rgba(0,229,255,.15);color:var(--accent);border:1px solid var(--glass-border);}
-
-/* Calc */
-.calc{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:340px;}
-.calc .display{grid-column:1/-1;background:rgba(0,0,0,.4);border-radius:14px;padding:14px;text-align:right;font-family:'Orbitron';font-size:28px;min-height:60px;overflow:hidden;word-wrap:break-word;}
-.calc button{padding:14px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;color:var(--text);font-size:16px;font-family:'Orbitron';}
-.calc button.op{color:var(--accent);}
-.calc button.eq{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04070d;grid-column:span 2;font-weight:700;}
-
-/* Notes/todo */
-.list-block{display:flex;flex-direction:column;gap:8px;}
-.list-block .item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--glass-border);}
-.list-block .item.done{opacity:.55;text-decoration:line-through;}
-.list-block .item input.chk{width:18px;height:18px;accent-color:var(--accent);}
-.list-block .item .txt{flex:1;font-size:14px;}
-.list-block .item button{color:var(--danger);}
-
-.pill-row{display:flex;gap:6px;flex-wrap:wrap;}
-.pill{padding:6px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-border);font-size:12px;cursor:pointer;transition:all .2s;}
-.pill:hover,.pill.active{background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(124,77,255,.15));border-color:var(--accent);color:var(--accent);}
-
-/* Drawing canvas */
-#drawCanvas{width:100%;height:400px;background:#0a0f1c;border-radius:12px;border:1px solid var(--glass-border);cursor:crosshair;touch-action:none;}
-
-/* QR result */
-.qr-out{display:flex;justify-content:center;padding:14px;background:#fff;border-radius:12px;}
-.qr-out img,.qr-out svg{max-width:220px;}
-
-/* Wake indicator */
-.wake-ind{position:fixed;top:14px;right:16px;z-index:60;padding:6px 12px;border-radius:20px;background:var(--glass-strong);border:1px solid var(--glass-border);font-size:11px;color:var(--text-dim);display:none;align-items:center;gap:6px;backdrop-filter:blur(12px);}
-.wake-ind.on{display:inline-flex;color:var(--accent);border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,.35);}
-.wake-ind .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulseDot 1.4s infinite;}
-
-/* Responsive tab */
-@media(max-width:820px){
-  .sidenav{width:64px;}
-  .nav-item{width:48px;height:48px;}
-  .nav-item i{font-size:16px;}
-  .nav-item span{font-size:8px;}
-  .chat-side{display:none;}
-  .topbar .status{display:none;}
-}
-@media(max-width:520px){
-  .sidenav{width:56px;padding:6px;}
-  .nav-item{width:44px;height:44px;border-radius:12px;}
-  .page{padding:10px;}
-}
-@media(orientation:portrait) and (max-width:900px){
-  .hero-clock{font-size:60px;}
-}
-
-/* Utility */
-.hide{display:none!important;}
-.center{display:flex;align-items:center;justify-content:center;}
-.mono{font-family:'JetBrains Mono',monospace;}
-.dim{color:var(--text-dim);}
-.small{font-size:12px;}
-.spread{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-.gap8{gap:8px;}
-.gap12{gap:12px;}
-.col{display:flex;flex-direction:column;}
-.row{display:flex;align-items:center;}
-.flex1{flex:1;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS - Gemini AI</title>
+  <style>
+    :root {
+      --bg: #050b16;
+      --panel: rgba(15, 23, 42, 0.9);
+      --panel-2: rgba(17, 24, 39, 0.75);
+      --line: rgba(148, 163, 184, 0.3);
+      --text: #e5f0ff;
+      --muted: #9fb5d1;
+      --accent: #67e8f9;
+      --accent-2: #8b5cf6;
+      --danger: #f87171;
+      --success: #4ade80;
+      --shadow: rgba(103, 232, 249, 0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100%; background: radial-gradient(circle at top, #101a2d, #050b16 60%);
+      color: var(--text); font-family: Inter, Arial, sans-serif;
+    }
+    body { display: flex; justify-content: center; align-items: center; padding: 24px; }
+    .app {
+      width: min(900px, 100%); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 30px var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 16px 20px; border-bottom: 1px solid var(--line); background: rgba(15, 23, 42, 0.8);
+    }
+    .brand { font-weight: 800; letter-spacing: 0.16em; }
+    .brand span { color: var(--accent); }
+    .actions { display: flex; gap: 10px; align-items: center; }
+    button {
+      border: 1px solid var(--line); background: rgba(15, 23, 42, 0.9); color: var(--text);
+      border-radius: 12px; padding: 10px 12px; cursor: pointer; font-weight: 600;
+    }
+    button.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #03141a; border: none;
+      box-shadow: 0 0 25px rgba(103, 232, 249, 0.4);
+    }
+    button.danger { border-color: rgba(248, 113, 113, 0.5); color: var(--danger); }
+    .body { display: grid; grid-template-columns: 280px 1fr; min-height: 620px; }
+    .sidebar {
+      border-right: 1px solid var(--line); background: var(--panel-2); padding: 16px;
+    }
+    .settings-box {
+      padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(15, 23, 42, 0.7);
+      margin-bottom: 18px;
+    }
+    .settings-box h3 { margin: 0 0 10px; font-size: 14px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+    label {
+      display: block; font-size: 12px; color: var(--muted); margin: 10px 0 6px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    input, select, textarea {
+      width: 100%; border-radius: 10px; border: 1px solid var(--line); background: rgba(2, 6, 23, 0.8);
+      color: var(--text); padding: 10px 12px; font-size: 14px;
+    }
+    .content {
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .chat {
+      flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .msg {
+      max-width: 82%; padding: 14px 16px; border-radius: 16px; line-height: 1.55;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.72);
+      white-space: pre-wrap; word-wrap: break-word;
+    }
+    .msg.user { align-self: flex-end; background: rgba(103, 232, 249, 0.14); border-color: rgba(103, 232, 249, 0.45); }
+    .msg.assistant { align-self: flex-start; }
+    .status-line {
+      color: var(--muted); font-size: 12px; padding: 0 20px 10px; min-height: 18px;
+    }
+    .composer {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 18px 20px 20px; border-top: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.75);
+    }
+    textarea {
+      resize: none; min-height: 52px; max-height: 180px; overflow-y: auto;
+    }
+    .hint {
+      color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.5;
+    }
+    .error { color: var(--danger); font-weight: 600; }
+    .ok { color: var(--success); font-weight: 600; }
+    @media (max-width: 760px) {
+      .body { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
+    }
+  </style>
 </head>
 <body>
-
-<!-- Backgrounds -->
-<div class="aurora">
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
-  <div class="blob b3"></div>
-</div>
-<canvas id="bgCanvas"></canvas>
-<canvas id="particleCanvas"></canvas>
-
-<div class="wake-ind" id="wakeInd"><span class="dot"></span> LISTENING FOR "HEY JARVIS"</div>
-
-<div id="app">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="brand"><span class="core"></span> J.A.R.V.I.S</div>
-    <div class="status" id="topStatus">
-      <span id="stClock"><i class="far fa-clock"></i> --:--</span>
-      <span id="stBat"><i class="fas fa-battery-three-quarters"></i> --%</span>
-      <span id="stNet"><i class="fas fa-wifi"></i> --</span>
-      <span id="stCpu"><i class="fas fa-microchip"></i> --%</span>
-    </div>
-    <div class="spacer"></div>
-    <button class="icon-btn" id="btnFullscreen" title="Fullscreen"><i class="fas fa-expand"></i></button>
-    <button class="icon-btn" id="btnTheme" title="Theme"><i class="fas fa-adjust"></i></button>
-    <button class="icon-btn" id="btnSettings" title="Settings"><i class="fas fa-cog"></i></button>
-  </div>
-
-  <div class="main">
-    <!-- SIDENAV -->
-    <nav class="sidenav" id="sidenav">
-      <button class="nav-item active" data-page="home"><i class="fas fa-home"></i><span>HOME</span></button>
-      <button class="nav-item" data-page="chat"><i class="fas fa-comments"></i><span>CHAT</span></button>
-      <button class="nav-item" data-page="voice"><i class="fas fa-microphone"></i><span>VOICE</span></button>
-      <button class="nav-item" data-page="camera"><i class="fas fa-camera"></i><span>CAMERA</span></button>
-      <button class="nav-item" data-page="files"><i class="fas fa-folder"></i><span>FILES</span></button>
-      <button class="nav-item" data-page="terminal"><i class="fas fa-terminal"></i><span>TERM</span></button>
-      <button class="nav-item" data-page="tools"><i class="fas fa-toolbox"></i><span>TOOLS</span></button>
-      <button class="nav-item" data-page="dash"><i class="fas fa-th-large"></i><span>DASH</span></button>
-    </nav>
-
-    <!-- CONTENT -->
-    <div class="content" id="content">
-
-      <!-- HOME -->
-      <section class="page active" data-page="home">
-        <div class="home-grid">
-          <div class="glass home-hero">
-            <div class="greet" id="greetLine">Welcome back, Director.</div>
-            <div class="title">J.A.R.V.I.S</div>
-            <div class="sub" id="tagline">All systems nominal. How may I assist you today?</div>
-            <div style="display:flex;gap:20px;align-items:baseline;flex-wrap:wrap;margin-top:10px;">
-              <div class="hero-clock" id="heroClock">00:00</div>
-              <div class="hero-date" id="heroDate">—</div>
-            </div>
-          </div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-cloud-sun"></i> Weather</div><div class="val" id="wxT">—</div><div class="small dim" id="wxD">Fetching…</div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-battery-half"></i> Battery</div><div class="val" id="batV">—</div><div class="bar"><i id="batBar" style="width:0%"></i></div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-wifi"></i> Network</div><div class="val small" id="netV">—</div><div class="small dim" id="netD">—</div></div>
-          <div class="glass mini hover"><div class="label"><i class="fab fa-bluetooth"></i> Bluetooth</div><div class="val small" id="btV">Ready</div><div class="small dim">Tap to scan</div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-microchip"></i> CPU</div><div class="val" id="cpuV">—%</div><div class="bar"><i id="cpuBar" style="width:0%"></i></div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-memory"></i> RAM</div><div class="val" id="ramV">—</div><div class="bar"><i id="ramBar" style="width:0%"></i></div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-hdd"></i> Storage</div><div class="val small" id="stoV">—</div><div class="bar"><i id="stoBar" style="width:0%"></i></div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-tachometer-alt"></i> Speed</div><div class="val small" id="spdV">—</div><div class="small dim" id="spdD">—</div></div>
-          <div class="glass mini hover"><div class="label"><i class="fas fa-location-dot"></i> Location</div><div class="val small" id="locV">—</div><div class="small dim" id="locD">Tap to allow</div></div>
-        </div>
-        <div class="sect-head"><h2>Quick Access</h2></div>
-        <div class="tools-grid">
-          <div class="glass tool-card" onclick="showPage('chat')"><i class="fas fa-comments"></i><div class="n">Open Chat</div></div>
-          <div class="glass tool-card" onclick="showPage('voice')"><i class="fas fa-microphone"></i><div class="n">Voice Mode</div></div>
-          <div class="glass tool-card" onclick="showPage('camera')"><i class="fas fa-camera"></i><div class="n">Camera</div></div>
-          <div class="glass tool-card" onclick="showPage('terminal')"><i class="fas fa-terminal"></i><div class="n">Terminal</div></div>
-          <div class="glass tool-card" onclick="openTool('calc')"><i class="fas fa-calculator"></i><div class="n">Calculator</div></div>
-          <div class="glass tool-card" onclick="openTool('translate')"><i class="fas fa-language"></i><div class="n">Translate</div></div>
-        </div>
-      </section>
-
-      <!-- CHAT -->
-      <section class="page" data-page="chat" style="padding:0;">
-        <div class="chat-wrap" style="padding:12px;">
-          <div class="glass chat-side">
-            <div class="row" style="justify-content:space-between;padding:4px;">
-              <h4 style="margin:0;">Conversations</h4>
-              <button class="icon-btn" style="width:32px;height:32px;" onclick="newChat()"><i class="fas fa-plus"></i></button>
-            </div>
-            <input class="search" placeholder="Search…" oninput="searchChats(this.value)" style="background:rgba(255,255,255,.05);border:1px solid var(--glass-border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;" />
-            <div id="chatList" class="col" style="gap:4px;"></div>
-          </div>
-          <div class="glass chat-main">
-            <div class="chat-toolbar">
-              <div class="mono small dim" id="chatTitle">New chat</div>
-              <div class="spacer" style="flex:1;"></div>
-              <button class="icon-btn" style="width:34px;height:34px;" title="Pin" onclick="togglePinChat()"><i class="fas fa-thumbtack"></i></button>
-              <button class="icon-btn" style="width:34px;height:34px;" title="Export" onclick="exportChat()"><i class="fas fa-download"></i></button>
-              <button class="icon-btn" style="width:34px;height:34px;" title="Import" onclick="importChat()"><i class="fas fa-upload"></i></button>
-              <button class="icon-btn" style="width:34px;height:34px;" title="Clear" onclick="clearCurrentChat()"><i class="fas fa-broom"></i></button>
-            </div>
-            <div class="chat-scroll" id="chatScroll"></div>
-            <div class="chat-input-bar">
-              <div class="chat-input">
-                <textarea id="chatInput" rows="1" placeholder="Ask JARVIS anything…" oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-                <button class="icon-btn" style="width:36px;height:36px;background:transparent;border-color:transparent;" title="Voice" onclick="quickVoice()"><i class="fas fa-microphone"></i></button>
-                <button class="send-btn" id="sendBtn" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
-              </div>
-              <button class="icon-btn" id="stopBtn" title="Stop" onclick="stopGen()" style="display:none;color:var(--danger);border-color:var(--danger);"><i class="fas fa-stop"></i></button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- VOICE -->
-      <section class="page" data-page="voice">
-        <div class="glass voice-stage">
-          <div class="orb" id="voiceOrb"></div>
-          <div class="voice-caption" id="voiceStat">TAP TO SPEAK</div>
-          <div class="voice-transcript" id="voiceTx">—</div>
-          <div class="voice-controls">
-            <button class="icon-btn" id="voiceMic" onclick="toggleListen()" title="Listen"><i class="fas fa-microphone"></i></button>
-            <button class="icon-btn" id="voicePTT" onmousedown="startPTT()" onmouseup="stopPTT()" ontouchstart="startPTT()" ontouchend="stopPTT()" title="Push to talk"><i class="fas fa-hand-pointer"></i></button>
-            <button class="icon-btn" onclick="toggleWake()" id="wakeBtn" title="Wake word"><i class="fas fa-ear-listen"></i></button>
-            <button class="icon-btn" onclick="stopSpeak()" title="Stop speaking"><i class="fas fa-volume-mute"></i></button>
-            <button class="icon-btn" onclick="openVoiceSettings()" title="Voice settings"><i class="fas fa-sliders"></i></button>
-          </div>
-        </div>
-      </section>
-
-      <!-- CAMERA -->
-      <section class="page" data-page="camera">
-        <div class="sect-head"><h2>Camera</h2><div class="sp"></div>
-          <button class="btn" onclick="camSwitch()"><i class="fas fa-camera-rotate"></i> Switch</button>
-          <button class="btn" onclick="camCapture()"><i class="fas fa-circle"></i> Capture</button>
-          <button class="btn primary" onclick="camAnalyze()"><i class="fas fa-eye"></i> Analyze</button>
-        </div>
-        <div class="camera-wrap">
-          <div class="glass cam-view">
-            <video id="camVideo" autoplay playsinline muted></video>
-            <canvas id="camCanvas" class="hide"></canvas>
-            <div class="cam-overlay"></div>
-            <div class="cam-toolbar">
-              <button class="icon-btn" onclick="camFullscreen()"><i class="fas fa-expand"></i></button>
-              <button class="icon-btn" onclick="camFlash()" id="camFlashBtn"><i class="fas fa-bolt"></i></button>
-              <button class="icon-btn" onclick="camQR()"><i class="fas fa-qrcode"></i></button>
-              <button class="icon-btn" onclick="camStart()"><i class="fas fa-play"></i></button>
-              <button class="icon-btn" onclick="camStop()"><i class="fas fa-pause"></i></button>
-            </div>
-          </div>
-          <div class="glass cam-panel">
-            <h4>Latest</h4>
-            <div class="cam-thumb" id="camThumb"></div>
-            <h4>Analysis</h4>
-            <div id="camAnal" class="small dim">Capture then analyze to see AI-detected objects, OCR text, and scene description.</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FILES -->
-      <section class="page" data-page="files">
-        <div class="sect-head"><h2>Files</h2></div>
-        <div class="glass files-drop" id="filesDrop">
-          <i class="fas fa-cloud-arrow-up"></i>
-          <div>Tap or drag files here</div>
-          <div class="small dim">PDF · DOCX · TXT · CSV · JSON · PNG · JPG · ZIP</div>
-          <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.csv,.json,.png,.jpg,.jpeg,.zip,image/*,text/*" class="hide" />
-        </div>
-        <div class="file-list" id="fileList"></div>
-      </section>
-
-      <!-- TERMINAL -->
-      <section class="page" data-page="terminal" style="padding:12px;">
-        <div class="glass terminal">
-          <div class="term-output" id="termOut"><span class="ok">J.A.R.V.I.S Terminal v1.0</span>
-<span class="out">Type "help" for available commands.</span>
-</div>
-          <div class="term-input-row"><span>jarvis@ta9:~$</span><input id="termIn" autocomplete="off" spellcheck="false" onkeydown="termKey(event)" /></div>
-        </div>
-      </section>
-
-      <!-- TOOLS -->
-      <section class="page" data-page="tools">
-        <div class="sect-head"><h2>Tools</h2></div>
-        <div class="tools-grid">
-          <div class="glass tool-card" onclick="openTool('calc')"><i class="fas fa-calculator"></i><div class="n">Calculator</div></div>
-          <div class="glass tool-card" onclick="openTool('notes')"><i class="fas fa-note-sticky"></i><div class="n">Notes</div></div>
-          <div class="glass tool-card" onclick="openTool('todo')"><i class="fas fa-list-check"></i><div class="n">Todo</div></div>
-          <div class="glass tool-card" onclick="openTool('calendar')"><i class="fas fa-calendar-days"></i><div class="n">Calendar</div></div>
-          <div class="glass tool-card" onclick="openTool('alarm')"><i class="fas fa-bell"></i><div class="n">Alarm</div></div>
-          <div class="glass tool-card" onclick="openTool('stopwatch')"><i class="fas fa-stopwatch"></i><div class="n">Stopwatch</div></div>
-          <div class="glass tool-card" onclick="openTool('timer')"><i class="fas fa-hourglass-half"></i><div class="n">Timer</div></div>
-          <div class="glass tool-card" onclick="openTool('unit')"><i class="fas fa-ruler-combined"></i><div class="n">Unit Convert</div></div>
-          <div class="glass tool-card" onclick="openTool('currency')"><i class="fas fa-dollar-sign"></i><div class="n">Currency</div></div>
-          <div class="glass tool-card" onclick="openTool('translate')"><i class="fas fa-language"></i><div class="n">Translator</div></div>
-          <div class="glass tool-card" onclick="openTool('qrgen')"><i class="fas fa-qrcode"></i><div class="n">QR Generator</div></div>
-          <div class="glass tool-card" onclick="openTool('qrscan')"><i class="fas fa-camera"></i><div class="n">QR Scanner</div></div>
-          <div class="glass tool-card" onclick="openTool('clip')"><i class="fas fa-clipboard"></i><div class="n">Clipboard</div></div>
-          <div class="glass tool-card" onclick="openTool('draw')"><i class="fas fa-paintbrush"></i><div class="n">Drawing</div></div>
-          <div class="glass tool-card" onclick="openTool('md')"><i class="fab fa-markdown"></i><div class="n">Markdown</div></div>
-          <div class="glass tool-card" onclick="openTool('json')"><i class="fas fa-code"></i><div class="n">JSON Viewer</div></div>
-          <div class="glass tool-card" onclick="openTool('pass')"><i class="fas fa-key"></i><div class="n">Password Gen</div></div>
-          <div class="glass tool-card" onclick="openTool('color')"><i class="fas fa-palette"></i><div class="n">Color Picker</div></div>
-          <div class="glass tool-card" onclick="openTool('gradient')"><i class="fas fa-fill-drip"></i><div class="n">Gradient</div></div>
-          <div class="glass tool-card" onclick="openTool('regex')"><i class="fas fa-asterisk"></i><div class="n">Regex Tester</div></div>
-        </div>
-      </section>
-
-      <!-- DASHBOARD -->
-      <section class="page" data-page="dash">
-        <div class="sect-head"><h2>Dashboard</h2><div class="sp"></div><button class="btn" onclick="refreshDash()"><i class="fas fa-rotate"></i> Refresh</button></div>
-        <div class="dash-grid">
-          <div class="glass dash-card"><h4><i class="fas fa-cloud-sun"></i> Weather</h4><div id="dashWx" class="col gap8"><div class="val mono" style="font-size:26px;color:var(--accent)">—</div><div class="small dim">Loading…</div></div></div>
-          <div class="glass dash-card"><h4><i class="fas fa-newspaper"></i> News</h4><div class="list-thin" id="dashNews"><div class="row">Loading headlines…</div></div></div>
-          <div class="glass dash-card"><h4><i class="fas fa-chart-line"></i> Stocks</h4><div class="list-thin" id="dashStocks"><div class="row"><span>AAPL</span><span class="chip">—</span></div><div class="row"><span>MSFT</span><span class="chip">—</span></div><div class="row"><span>GOOGL</span><span class="chip">—</span></div><div class="row"><span>NVDA</span><span class="chip">—</span></div></div></div>
-          <div class="glass dash-card"><h4><i class="fab fa-bitcoin"></i> Crypto</h4><div class="list-thin" id="dashCrypto"><div class="row"><span>BTC</span><span class="chip">—</span></div><div class="row"><span>ETH</span><span class="chip">—</span></div><div class="row"><span>SOL</span><span class="chip">—</span></div></div></div>
-          <div class="glass dash-card"><h4><i class="fas fa-calendar"></i> Calendar</h4><div class="mono" style="font-size:14px;" id="dashCal"></div></div>
-          <div class="glass dash-card"><h4><i class="fas fa-list-check"></i> Tasks</h4><div id="dashTasks" class="list-thin"></div></div>
-          <div class="glass dash-card"><h4><i class="fas fa-note-sticky"></i> Quick Note</h4><textarea id="dashNote" placeholder="Jot something down…" style="background:rgba(0,0,0,.2);border:1px solid var(--glass-border);border-radius:10px;padding:10px;color:var(--text);min-height:80px;resize:vertical;outline:none;font-family:inherit;" oninput="localStorage.setItem('jarvis.note',this.value)"></textarea></div>
-          <div class="glass dash-card"><h4><i class="fas fa-microchip"></i> System</h4>
-            <div class="list-thin">
-              <div class="row"><span>CPU</span><span id="dsCpu" class="chip">—</span></div>
-              <div class="row"><span>RAM</span><span id="dsRam" class="chip">—</span></div>
-              <div class="row"><span>Storage</span><span id="dsSto" class="chip">—</span></div>
-              <div class="row"><span>Battery</span><span id="dsBat" class="chip">—</span></div>
-              <div class="row"><span>Network</span><span id="dsNet" class="chip">—</span></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </div>
-  </div>
-</div>
-
-<!-- MODAL -->
-<div class="modal-back" id="modalBack">
-  <div class="glass modal">
-    <div class="modal-head">
-      <h3 id="modalTitle">Settings</h3>
-      <button class="icon-btn" style="width:32px;height:32px;" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-foot" id="modalFoot"></div>
-  </div>
-</div>
-
-<div class="toast-wrap" id="toastWrap"></div>
-
-<!-- Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.11/purify.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-
-<script type="module">
-import { GoogleGenAI } from "https://esm.run/@google/genai";
-window.__GoogleGenAI = GoogleGenAI;
-window.dispatchEvent(new Event('genai-ready'));
-</script>
-
-<script>
-/* ============================================================
-   J.A.R.V.I.S — Core Application
-============================================================ */
-'use strict';
-
-const $ = (s,r=document)=>r.querySelector(s);
-const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
-const LS = { get:(k,d=null)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch{return d;}}, set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}, del:(k)=>localStorage.removeItem(k) };
-
-/* Toast */
-function toast(msg,ms=2400){
-  const el=document.createElement('div');el.className='toast';el.textContent=msg;
-  $('#toastWrap').appendChild(el);
-  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);},ms);
-}
-
-/* Theme */
-function applyTheme(t){
-  document.documentElement.dataset.theme=t;
-  LS.set('jarvis.theme',t);
-}
-applyTheme(LS.get('jarvis.theme','dark'));
-$('#btnTheme').addEventListener('click',()=>{
-  const cur=document.documentElement.dataset.theme;
-  applyTheme(cur==='dark'?'light':'dark');
-});
-
-/* Fullscreen */
-$('#btnFullscreen').addEventListener('click',()=>{
-  if(!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-  else document.exitFullscreen?.();
-});
-
-/* Navigation */
-function showPage(name){
-  $$('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===name));
-  $$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
-  if(name==='camera') camStart();
-  if(name==='dash') refreshDash();
-}
-window.showPage=showPage;
-$$('.nav-item').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-
-/* Clock / Date */
-function tickClock(){
-  const d=new Date();
-  const hh=String(d.getHours()).padStart(2,'0');
-  const mm=String(d.getMinutes()).padStart(2,'0');
-  const ss=String(d.getSeconds()).padStart(2,'0');
-  $('#heroClock').textContent=`${hh}:${mm}`;
-  $('#stClock').innerHTML=`<i class="far fa-clock"></i> ${hh}:${mm}:${ss}`;
-  $('#heroDate').textContent=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const h=d.getHours();
-  const greet = h<5?'Working late, Director.':h<12?'Good morning, Director.':h<18?'Good afternoon, Director.':'Good evening, Director.';
-  $('#greetLine').textContent=greet;
-}
-setInterval(tickClock,1000);tickClock();
-
-/* Battery */
-async function initBattery(){
-  if(!navigator.getBattery) return;
-  try{
-    const b=await navigator.getBattery();
-    const upd=()=>{
-      const pct=Math.round(b.level*100);
-      $('#batV').textContent=pct+'%'+(b.charging?' ⚡':'');
-      $('#batBar').style.width=pct+'%';
-      $('#stBat').innerHTML=`<i class="fas fa-battery-${pct>80?'full':pct>50?'three-quarters':pct>25?'half':'quarter'}"></i> ${pct}%`;
-      $('#dsBat').textContent=pct+'%';
-    };
-    upd();['levelchange','chargingchange'].forEach(e=>b.addEventListener(e,upd));
-  }catch{}
-}
-initBattery();
-
-/* Network */
-function initNet(){
-  const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-  const upd=()=>{
-    const on=navigator.onLine;
-    const t=c?.effectiveType||'—';
-    const dl=c?.downlink?c.downlink+' Mbps':'—';
-    $('#netV').textContent=on?t.toUpperCase():'Offline';
-    $('#netD').textContent=dl;
-    $('#spdV').textContent=dl;
-    $('#spdD').textContent=c?.rtt?(c.rtt+' ms'):'—';
-    $('#stNet').innerHTML=`<i class="fas fa-${on?'wifi':'wifi-slash'}"></i> ${on?t:'off'}`;
-    $('#dsNet').textContent=on?t:'off';
-  };
-  upd();window.addEventListener('online',upd);window.addEventListener('offline',upd);c?.addEventListener?.('change',upd);
-}
-initNet();
-
-/* Fake but plausible CPU / RAM / Storage */
-async function initSys(){
-  const cores=navigator.hardwareConcurrency||4;
-  let last=performance.now(),acc=0,frames=0;
-  function loop(){
-    const now=performance.now();const d=now-last;last=now;
-    // approximate CPU from frame drift
-    const load = Math.min(99,Math.max(3,Math.round((d-16)*3 + 12 + Math.random()*8)));
-    $('#cpuV').textContent=load+'%';
-    $('#cpuBar').style.width=load+'%';
-    $('#stCpu').innerHTML=`<i class="fas fa-microchip"></i> ${load}%`;
-    $('#dsCpu').textContent=load+'% · '+cores+' cores';
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-
-  if(performance.memory){
-    setInterval(()=>{
-      const m=performance.memory;
-      const used=m.usedJSHeapSize/1048576;
-      const tot=m.jsHeapSizeLimit/1048576;
-      const p=Math.round(used/tot*100);
-      $('#ramV').textContent=used.toFixed(0)+' MB';
-      $('#ramBar').style.width=p+'%';
-      $('#dsRam').textContent=used.toFixed(0)+'/'+tot.toFixed(0)+' MB';
-    },1500);
-  }else{
-    $('#ramV').textContent='n/a';$('#dsRam').textContent='n/a';
-  }
-
-  if(navigator.storage?.estimate){
-    try{
-      const e=await navigator.storage.estimate();
-      const used=(e.usage/1073741824).toFixed(2);
-      const q=(e.quota/1073741824).toFixed(1);
-      const p=Math.round(e.usage/e.quota*100);
-      $('#stoV').textContent=used+' / '+q+' GB';
-      $('#stoBar').style.width=p+'%';
-      $('#dsSto').textContent=used+'/'+q+' GB';
-    }catch{}
-  }
-}
-initSys();
-
-/* Weather + Location */
-async function loadWeather(lat,lon){
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto`);
-    const j=await r.json();
-    const t=j.current.temperature_2m;
-    const desc=weatherCodeText(j.current.weather_code);
-    $('#wxT').textContent=Math.round(t)+'°C';
-    $('#wxD').textContent=desc+' · '+j.current.wind_speed_10m+' km/h';
-    $('#dashWx').innerHTML=`<div class="val mono" style="font-size:34px;color:var(--accent)">${Math.round(t)}°C</div><div class="small">${desc}</div><div class="small dim">Humidity ${j.current.relative_humidity_2m}% · Wind ${j.current.wind_speed_10m} km/h</div>`;
-  }catch(e){$('#wxD').textContent='Unavailable';}
-}
-function weatherCodeText(c){
-  const m={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Rain showers',81:'Rain showers',82:'Violent showers',95:'Thunderstorm',96:'Thunderstorm+hail',99:'Thunderstorm+hail'};
-  return m[c]||'—';
-}
-function initLoc(){
-  if(!navigator.geolocation){$('#locV').textContent='Unavailable';return;}
-  navigator.geolocation.getCurrentPosition(async p=>{
-    const {latitude,longitude}=p.coords;
-    $('#locV').textContent=latitude.toFixed(2)+', '+longitude.toFixed(2);
-    try{
-      const r=await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&count=1`);
-      const j=await r.json();
-      const n=j.results?.[0];
-      if(n){$('#locD').textContent=(n.name||'')+', '+(n.country||'');}
-    }catch{}
-    loadWeather(latitude,longitude);
-  },err=>{
-    $('#locV').textContent='Denied';
-    loadWeather(37.77,-122.41); // fallback SF
-  },{timeout:8000,maximumAge:600000});
-}
-initLoc();
-
-/* Background — Three.js star / grid */
-(function bg(){
-  const canvas=$('#bgCanvas');
-  if(!window.THREE){return;}
-  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,2000);
-  camera.position.z=6;
-  const geo=new THREE.BufferGeometry();
-  const N=1400,pos=new Float32Array(N*3);
-  for(let i=0;i<N;i++){pos[i*3]=(Math.random()-.5)*40;pos[i*3+1]=(Math.random()-.5)*40;pos[i*3+2]=(Math.random()-.5)*40;}
-  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  const mat=new THREE.PointsMaterial({color:0x00e5ff,size:.03,transparent:true,opacity:.7});
-  const pts=new THREE.Points(geo,mat);scene.add(pts);
-  const mat2=new THREE.PointsMaterial({color:0x7c4dff,size:.05,transparent:true,opacity:.5});
-  const pts2=new THREE.Points(geo.clone(),mat2);pts2.rotation.x=0.5;scene.add(pts2);
-  function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
-  resize();addEventListener('resize',resize);
-  function anim(){pts.rotation.y+=.0006;pts.rotation.x+=.0003;pts2.rotation.y-=.0004;renderer.render(scene,camera);requestAnimationFrame(anim);}
-  anim();
-})();
-
-/* Particle overlay */
-(function particles(){
-  const c=$('#particleCanvas');const ctx=c.getContext('2d');
-  let W,H,ps=[];
-  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;ps=[];for(let i=0;i<50;i++)ps.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+.5,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,a:Math.random()*.5+.2});}
-  resize();addEventListener('resize',resize);
-  function loop(){ctx.clearRect(0,0,W,H);for(const p of ps){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,229,255,${p.a})`;ctx.shadowBlur=6;ctx.shadowColor='#00e5ff';ctx.fill();}ctx.shadowBlur=0;requestAnimationFrame(loop);}
-  loop();
-})();
-
-/* ==================== MODAL ==================== */
-function openModal(title,bodyHTML,footHTML=''){
-  $('#modalTitle').textContent=title;
-  $('#modalBody').innerHTML=bodyHTML;
-  $('#modalFoot').innerHTML=footHTML||'<button class="btn" onclick="closeModal()">Close</button>';
-  $('#modalBack').classList.add('show');
-}
-function closeModal(){$('#modalBack').classList.remove('show');}
-window.openModal=openModal;window.closeModal=closeModal;
-$('#modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeModal();});
-
-/* ==================== SETTINGS ==================== */
-function openSettings(){
-  const key=LS.get('jarvis.apiKey','');
-  const voice=LS.get('jarvis.voice',{name:'',rate:1,pitch:1,volume:1});
-  openModal('Settings',`
-    <label>Gemini API Key <span class="dim small">(stored locally)</span></label>
-    <input type="password" id="setKey" value="${(key||'').replace(/"/g,'&quot;')}" placeholder="Enter your Google Gemini API key" />
-    <div class="row small dim" style="margin-top:6px;"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get an API key →</a></div>
-    <label>Model</label>
-    <select id="setModel">
-      <option value="gemini-2.5-flash">gemini-2.5-flash (recommended)</option>
-      <option value="gemini-2.5-pro">gemini-2.5-pro</option>
-      <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-    </select>
-    <label>Theme</label>
-    <select id="setTheme">
-      <option value="dark">Dark (Liquid Glass)</option>
-      <option value="light">Light</option>
-    </select>
-    <label>Voice</label>
-    <select id="setVoice"><option value="">Default</option></select>
-    <div class="row gap12" style="margin-top:8px;">
-      <div class="flex1"><label>Rate</label><input type="range" id="setRate" min=".5" max="2" step=".05" value="${voice.rate}" /></div>
-      <div class="flex1"><label>Pitch</label><input type="range" id="setPitch" min="0" max="2" step=".05" value="${voice.pitch}" /></div>
-      <div class="flex1"><label>Volume</label><input type="range" id="setVol" min="0" max="1" step=".05" value="${voice.volume}" /></div>
-    </div>
-    <label>Wake word</label>
-    <input type="text" id="setWake" value="${LS.get('jarvis.wake','hey jarvis')}" />
-  `,`<button class="btn danger" onclick="LS.del('jarvis.apiKey');closeModal();toast('Key cleared');">Clear Key</button><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button>`);
-  $('#setModel').value=LS.get('jarvis.model','gemini-2.5-flash');
-  $('#setTheme').value=document.documentElement.dataset.theme;
-  const vs=speechSynthesis.getVoices();
-  const sel=$('#setVoice');
-  vs.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=`${v.name} (${v.lang})`;sel.appendChild(o);});
-  sel.value=voice.name||'';
-}
-window.LS=LS;
-window.saveSettings=function(){
-  LS.set('jarvis.apiKey',$('#setKey').value.trim());
-  LS.set('jarvis.model',$('#setModel').value);
-  applyTheme($('#setTheme').value);
-  LS.set('jarvis.voice',{name:$('#setVoice').value,rate:+$('#setRate').value,pitch:+$('#setPitch').value,volume:+$('#setVol').value});
-  LS.set('jarvis.wake',$('#setWake').value.trim().toLowerCase());
-  closeModal();toast('Settings saved');
-  initGenAI();
-};
-$('#btnSettings').addEventListener('click',openSettings);
-window.openVoiceSettings=openSettings;
-
-/* ==================== GEMINI ==================== */
-let genai=null,currentModel=null,abortCtl=null;
-async function initGenAI(){
-  await waitGenAI();
-  const key=LS.get('jarvis.apiKey','');
-  if(!key){ genai=null; return; }
-  try{
-    genai=new window.__GoogleGenAI({apiKey:key});
-    currentModel=LS.get('jarvis.model','gemini-2.5-flash');
-  }catch(e){console.warn(e);genai=null;}
-}
-function waitGenAI(){return new Promise(res=>{if(window.__GoogleGenAI)return res();window.addEventListener('genai-ready',()=>res(),{once:true});});}
-
-async function askKeyIfNeeded(){
-  if(LS.get('jarvis.apiKey','')) return true;
-  return new Promise(resolve=>{
-    openModal('Welcome, Director',`
-      <p class="dim small" style="margin:0 0 12px;">J.A.R.V.I.S needs a Google Gemini API key to think. Your key is stored only in this browser.</p>
-      <label>Gemini API Key</label>
-      <input type="password" id="firstKey" placeholder="Paste your API key here" />
-      <div class="row small dim" style="margin-top:6px;"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key at Google AI Studio →</a></div>
-    `,`<button class="btn" onclick="closeModal();window.__firstKeyRes(false);">Later</button><button class="btn primary" onclick="LS.set('jarvis.apiKey',document.getElementById('firstKey').value.trim());closeModal();window.__firstKeyRes(true);">Save</button>`);
-    window.__firstKeyRes=async(ok)=>{if(ok){await initGenAI();resolve(!!genai);}else resolve(false);};
-  });
-}
-
-const SYSTEM_PROMPT = `You are JARVIS. Intelligent. Polite. Professional. Loyal. Witty. Helpful. Acts exactly like Tony Stark's AI assistant. Refer to the user as "Sir" or "Director" when natural. Be concise but insightful. Use markdown when useful. When user asks about time, weather, battery — you may reply generally but note the UI already shows live data.`;
-
-async function geminiStream(history,onChunk,onDone,onErr,extraParts=null){
-  if(!genai){const ok=await askKeyIfNeeded();if(!ok){onErr('API key required');return;}}
-  try{
-    abortCtl=new AbortController();
-    const contents=history.map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]}));
-    if(extraParts && contents.length){ contents[contents.length-1].parts.push(...extraParts); }
-    const resp=await genai.models.generateContentStream({
-      model:currentModel||'gemini-2.5-flash',
-      contents,
-      config:{systemInstruction:SYSTEM_PROMPT}
-    });
-    let full='';
-    for await (const chunk of resp){
-      if(abortCtl?.signal.aborted) break;
-      const t=chunk.text||'';
-      if(t){full+=t;onChunk(t,full);}
-    }
-    onDone(full);
-  }catch(e){console.error(e);onErr(e.message||String(e));}
-}
-
-/* ==================== CHAT ==================== */
-let chats=LS.get('jarvis.chats',[]);
-let activeChatId=LS.get('jarvis.activeChat',null);
-
-function newChat(){
-  const id='c_'+Date.now();
-  chats.unshift({id,title:'New chat',messages:[],pinned:false,ts:Date.now()});
-  activeChatId=id;persistChats();renderChatList();renderChat();
-}
-function persistChats(){LS.set('jarvis.chats',chats);LS.set('jarvis.activeChat',activeChatId);}
-function getActive(){return chats.find(c=>c.id===activeChatId);}
-function renderChatList(filter=''){
-  const list=$('#chatList');list.innerHTML='';
-  const arr=[...chats].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.ts-a.ts);
-  arr.filter(c=>!filter||c.title.toLowerCase().includes(filter.toLowerCase())||c.messages.some(m=>m.content.toLowerCase().includes(filter.toLowerCase()))).forEach(c=>{
-    const el=document.createElement('div');
-    el.className='chat-list-item'+(c.id===activeChatId?' active':'');
-    el.innerHTML=`<i class="far fa-message"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title)}</span>${c.pinned?'<i class="fas fa-thumbtack pin"></i>':''}`;
-    el.onclick=()=>{activeChatId=c.id;persistChats();renderChatList();renderChat();};
-    list.appendChild(el);
-  });
-}
-window.searchChats=v=>renderChatList(v);
-window.newChat=newChat;
-window.togglePinChat=()=>{const c=getActive();if(!c)return;c.pinned=!c.pinned;persistChats();renderChatList();toast(c.pinned?'Pinned':'Unpinned');};
-window.exportChat=()=>{const c=getActive();if(!c)return;const blob=new Blob([JSON.stringify(c,null,2)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=(c.title||'chat')+'.json';a.click();URL.revokeObjectURL(u);};
-window.importChat=()=>{const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const c=JSON.parse(r.result);c.id='c_'+Date.now();chats.unshift(c);activeChatId=c.id;persistChats();renderChatList();renderChat();toast('Imported');}catch{toast('Invalid file');}};r.readAsText(f);};i.click();};
-window.clearCurrentChat=()=>{const c=getActive();if(!c)return;c.messages=[];persistChats();renderChat();};
-
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function renderMarkdown(txt){
-  try{
-    const raw=marked.parse(txt,{breaks:true,gfm:true});
-    return DOMPurify.sanitize(raw);
-  }catch{return escapeHtml(txt);}
-}
-function renderChat(){
-  const c=getActive();const scroll=$('#chatScroll');scroll.innerHTML='';
-  if(!c){ $('#chatTitle').textContent='No chat';return; }
-  $('#chatTitle').textContent=c.title;
-  c.messages.forEach(m=>appendMsg(m,false));
-  scroll.scrollTop=scroll.scrollHeight;
-}
-function appendMsg(m,scroll=true){
-  const wrap=document.createElement('div');
-  wrap.className='msg '+(m.role==='user'?'user':'ai');
-  wrap.innerHTML=`
-    <div class="avatar">${m.role==='user'?'D':'J'}</div>
-    <div style="min-width:0;">
-      <div class="bubble" data-role="${m.role}">${renderMarkdown(m.content)}</div>
-      <div class="msg-actions">
-        <button onclick="copyMsg(this)"><i class="far fa-copy"></i> Copy</button>
-        ${m.role==='assistant'?'<button onclick="regenLast(this)"><i class="fas fa-rotate"></i> Regenerate</button>':''}
+  <div class="app">
+    <div class="topbar">
+      <div class="brand"><span>J.A.R.V.I.S</span> // Gemini</div>
+      <div class="actions">
+        <button id="saveBtn" class="primary">Save API Key</button>
+        <button id="clearBtn" class="danger">Clear</button>
       </div>
-    </div>`;
-  $('#chatScroll').appendChild(wrap);
-  wrap.querySelectorAll('pre code').forEach(b=>{try{hljs.highlightElement(b);}catch{}});
-  if(scroll) $('#chatScroll').scrollTop=$('#chatScroll').scrollHeight;
-  return wrap;
-}
-window.copyMsg=btn=>{const b=btn.closest('.msg').querySelector('.bubble');navigator.clipboard.writeText(b.innerText).then(()=>toast('Copied'));};
-window.regenLast=async(btn)=>{
-  const c=getActive();if(!c)return;
-  // remove last assistant and re-run
-  for(let i=c.messages.length-1;i>=0;i--){if(c.messages[i].role==='assistant'){c.messages.splice(i,1);break;}}
-  persistChats();renderChat();await runAssistant();
-};
-function autoGrow(t){t.style.height='auto';t.style.height=Math.min(150,t.scrollHeight)+'px';}
-window.autoGrow=autoGrow;
+    </div>
 
-async function sendChat(){
-  const inp=$('#chatInput');const val=inp.value.trim();if(!val)return;
-  if(!getActive()) newChat();
-  const c=getActive();
-  c.messages.push({role:'user',content:val,ts:Date.now()});
-  if(c.messages.filter(m=>m.role==='user').length===1){ c.title=val.slice(0,40); }
-  inp.value='';autoGrow(inp);
-  persistChats();renderChatList();
-  appendMsg(c.messages[c.messages.length-1]);
-  await runAssistant();
-}
-window.sendChat=sendChat;
+    <div class="body">
+      <aside class="sidebar">
+        <div class="settings-box">
+          <h3>Gemini settings</h3>
+          <label for="apiKeyInput">API key</label>
+          <input id="apiKeyInput" type="password" placeholder="Paste Google AI Studio key" />
+          <label for="modelSelect">Model</label>
+          <select id="modelSelect">
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+          </select>
+          <div class="hint">Get a key from: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#67e8f9;">Google AI Studio</a></div>
+        </div>
+      </aside>
 
-async function runAssistant(){
-  const c=getActive();if(!c)return;
-  $('#sendBtn').disabled=true;$('#stopBtn').style.display='inline-flex';
-  const msg={role:'assistant',content:'',ts:Date.now()};
-  c.messages.push(msg);
-  const node=appendMsg(msg);
-  const bubble=node.querySelector('.bubble');
-  bubble.innerHTML=`<span class="thinking"><span></span><span></span><span></span></span>`;
-  await geminiStream(
-    c.messages.slice(0,-1),
-    (chunk,full)=>{msg.content=full;bubble.innerHTML=renderMarkdown(full);bubble.querySelectorAll('pre code').forEach(b=>{try{hljs.highlightElement(b);}catch{}});$('#chatScroll').scrollTop=$('#chatScroll').scrollHeight;},
-    (full)=>{msg.content=full||'(no response)';persistChats();$('#sendBtn').disabled=false;$('#stopBtn').style.display='none';if(voiceAutoSpeak)speak(full);},
-    (err)=>{bubble.innerHTML=`<span style="color:var(--danger)">Error: ${escapeHtml(err)}</span>`;$('#sendBtn').disabled=false;$('#stopBtn').style.display='none';}
-  );
-}
-window.stopGen=()=>{abortCtl?.abort();$('#sendBtn').disabled=false;$('#stopBtn').style.display='none';};
+      <main class="content">
+        <div id="chat" class="chat"></div>
+        <div id="statusLine" class="status-line">Ready. Enter your API key and start chatting.</div>
+        <div class="composer">
+          <textarea id="prompt" placeholder="Ask JARVIS anything..."></textarea>
+          <button id="sendBtn" class="primary">Send</button>
+        </div>
+      </main>
+    </div>
+  </div>
 
-/* ==================== VOICE ==================== */
-let recog=null,listening=false,wakeMode=false,voiceAutoSpeak=true;
-function nativeVoiceAvailable(){return !!(window.AndroidJARVIS&&typeof window.AndroidJARVIS.startListening==='function');}
-function handleVoiceText(txt){
-  txt=(txt||'').trim(); if(!txt)return;
-  $('#voiceTx').textContent=txt;
-  if(wakeMode){
-    const wake=LS.get('jarvis.wake','hey jarvis');
-    const low=txt.toLowerCase(), w=wake.toLowerCase();
-    if(low.includes(w)){
-      const after=low.split(w)[1]?.trim();
-      if(after){sendVoiceQuery(after);}else{speak('Yes, Director?');}
+  <script type="module">
+    import { GoogleGenAI } from 'https://esm.run/@google/genai';
+
+    const DEFAULT_MODEL = 'gemini-2.5-flash';
+    const LS_KEY = 'jarvis.apiKey';
+    const LS_MODEL = 'jarvis.model';
+
+    const chatEl = document.getElementById('chat');
+    const statusEl = document.getElementById('statusLine');
+    const inputEl = document.getElementById('prompt');
+    const apiKeyEl = document.getElementById('apiKeyInput');
+    const modelEl = document.getElementById('modelSelect');
+
+    let genai = null;
+    let currentModel = localStorage.getItem(LS_MODEL) || DEFAULT_MODEL;
+    let abortController = null;
+
+    function setStatus(text, type = '') {
+      statusEl.textContent = text;
+      statusEl.className = 'status-line';
+      if (type === 'error') statusEl.classList.add('error');
+      if (type === 'ok') statusEl.classList.add('ok');
     }
-  }else sendVoiceQuery(txt);
-}
-window.__nativeSpeechResult=(txt,isFinal)=>{if(isFinal)handleVoiceText(txt);else $('#voiceTx').textContent=txt||'—';};
-window.__nativeSpeechError=(err)=>{$('#voiceStat').textContent='ERROR: '+(err||'speech');};
-window.__nativeSpeechEnded=()=>{if(listening&&nativeVoiceAvailable()){setTimeout(()=>{try{window.AndroidJARVIS.startListening(navigator.language||'en-US');}catch{}},180);}else{$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';}};
-function ensureRecog(){
-  if(nativeVoiceAvailable()) return window.AndroidJARVIS;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR)return null;
-  if(recog)return recog;
-  recog=new SR();
-  recog.lang=navigator.language||'en-US';
-  recog.continuous=true; recog.interimResults=true;
-  recog.onresult=(e)=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t;else interim+=t;}$('#voiceTx').textContent=(final||interim||'—');if(final)handleVoiceText(final);};
-  recog.onerror=(e)=>{$('#voiceStat').textContent='ERROR: '+e.error;};
-  recog.onend=()=>{if(listening){try{recog.start();}catch{}}else{$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';}};
-  return recog;
-}
-function startVoiceListening(){
-  const r=ensureRecog(); if(!r){toast('Speech recognition not supported on this device');return false;}
-  listening=true; $('#voiceOrb').classList.add('listening'); $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'LISTENING…';
-  try{if(nativeVoiceAvailable()) r.startListening(navigator.language||'en-US'); else r.start();return true;}catch{return false;}
-}
-function stopVoiceListening(){
-  listening=false;
-  try{if(nativeVoiceAvailable())window.AndroidJARVIS.stopListening();else recog?.stop();}catch{}
-  $('#voiceOrb').classList.remove('listening'); $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';
-}
-function toggleListen(){if(listening)stopVoiceListening();else startVoiceListening();}
-window.toggleListen=toggleListen;
-let pttActive=false;
-window.startPTT=()=>{pttActive=true;startVoiceListening();$('#voiceStat').textContent='PUSH-TO-TALK';};
-window.stopPTT=()=>{if(!pttActive)return;pttActive=false;stopVoiceListening();};
-window.toggleWake=()=>{
-  wakeMode=!wakeMode; $('#wakeBtn').classList.toggle('active',wakeMode); $('#wakeInd').classList.toggle('on',wakeMode);
-  if(wakeMode)startVoiceListening(); else stopVoiceListening();
-  $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'WAKE MODE OFF';
-};
 
-async function sendVoiceQuery(txt){
-  $('#voiceStat').textContent='THINKING…';
-  $('#voiceOrb').classList.remove('listening');$('#voiceOrb').classList.add('speaking');
-  if(!getActive()) newChat();
-  const c=getActive();
-  c.messages.push({role:'user',content:txt,ts:Date.now()});
-  const msg={role:'assistant',content:'',ts:Date.now()};c.messages.push(msg);
-  await geminiStream(c.messages.slice(0,-1),
-    (ch,full)=>{msg.content=full;$('#voiceTx').textContent=full;},
-    (full)=>{msg.content=full;persistChats();$('#voiceStat').textContent='SPEAKING…';speak(full,()=>{$('#voiceOrb').classList.remove('speaking');$('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';});},
-    (err)=>{$('#voiceStat').textContent='ERROR';toast(err);}
-  );
-}
-let nativeSpeakEnd=null;
-window.__nativeSpeakDone=()=>{const cb=nativeSpeakEnd;nativeSpeakEnd=null;cb?.();};
-function speak(text,onEnd){
-  const clean=String(text||'').replace(/[*_\`#>]/g,'');
-  const v=LS.get('jarvis.voice',{});
-  if(window.AndroidJARVIS&&typeof window.AndroidJARVIS.speak==='function'){
-    nativeSpeakEnd=onEnd||null;
-    try{window.AndroidJARVIS.speak(clean,+(v.rate||1),+(v.pitch||1),+(v.volume??1));return;}catch{}
-  }
-  try{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(clean);
-    const voices=speechSynthesis.getVoices();
-    if(v.name){const vv=voices.find(x=>x.name===v.name);if(vv)u.voice=vv;}
-    u.rate=v.rate||1;u.pitch=v.pitch||1;u.volume=v.volume??1;
-    u.onend=onEnd||(()=>{}); speechSynthesis.speak(u);
-  }catch(e){onEnd?.();}
-}
-window.stopSpeak=()=>{nativeSpeakEnd=null;try{window.AndroidJARVIS?.stopSpeaking();}catch{}try{speechSynthesis.cancel();}catch{}};
-window.quickVoice=()=>{showPage('voice');setTimeout(toggleListen,300);};
-$('#voiceOrb').addEventListener('click',toggleListen);
+    function saveApiKey() {
+      const key = apiKeyEl.value.trim();
+      if (!key) {
+        localStorage.removeItem(LS_KEY);
+        genai = null;
+        setStatus('API key cleared. Add a valid key to continue.', 'error');
+        return;
+      }
+      localStorage.setItem(LS_KEY, key);
+      localStorage.setItem(LS_MODEL, modelEl.value || DEFAULT_MODEL);
+      initGenAI();
+      setStatus('API key saved and ready.', 'ok');
+    }
 
-/* ==================== CAMERA ==================== */
-let camStream=null,camFacing='environment';
-async function camStart(){
-  const v=$('#camVideo');
-  try{
-    if(camStream) camStream.getTracks().forEach(t=>t.stop());
-    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing},audio:false});
-    v.srcObject=camStream;
-  }catch(e){toast('Camera error: '+e.message);}
-}
-function camStop(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;$('#camVideo').srcObject=null;}}
-window.camStart=camStart;window.camStop=camStop;
-window.camSwitch=()=>{camFacing=camFacing==='environment'?'user':'environment';camStart();};
-window.camCapture=()=>{
-  const v=$('#camVideo'),c=$('#camCanvas');
-  if(!v.videoWidth)return toast('No video');
-  c.width=v.videoWidth;c.height=v.videoHeight;
-  c.getContext('2d').drawImage(v,0,0);
-  const url=c.toDataURL('image/jpeg',.85);
-  $('#camThumb').innerHTML=`<img src="${url}" />`;
-  window.__lastCap=url;
-  toast('Captured');
-};
-window.camAnalyze=async()=>{
-  if(!window.__lastCap)return toast('Capture first');
-  $('#camAnal').textContent='Analyzing…';
-  if(!genai){const ok=await askKeyIfNeeded();if(!ok)return;}
-  try{
-    const b64=window.__lastCap.split(',')[1];
-    const resp=await genai.models.generateContent({
-      model:currentModel||'gemini-2.5-flash',
-      contents:[{role:'user',parts:[{text:'Describe this image. List detected objects. Extract any visible text (OCR). Be concise.'},{inlineData:{mimeType:'image/jpeg',data:b64}}]}],
-      config:{systemInstruction:SYSTEM_PROMPT}
+    function clearApiKey() {
+      localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(LS_MODEL);
+      apiKeyEl.value = '';
+      modelEl.value = DEFAULT_MODEL;
+      genai = null;
+      setStatus('API key cleared.', 'error');
+    }
+
+    function appendMessage(role, text) {
+      const msg = document.createElement('div');
+      msg.className = `msg ${role}`;
+      msg.textContent = text;
+      chatEl.appendChild(msg);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    async function initGenAI() {
+      const key = (localStorage.getItem(LS_KEY) || '').trim();
+      if (!key) {
+        genai = null;
+        setStatus('No API key found. Add one in settings.', 'error');
+        return;
+      }
+
+      try {
+        genai = new GoogleGenAI({ apiKey: key });
+        currentModel = localStorage.getItem(LS_MODEL) || DEFAULT_MODEL;
+        modelEl.value = currentModel;
+        setStatus('Gemini connected successfully.', 'ok');
+      } catch (error) {
+        genai = null;
+        setStatus(`API setup failed: ${error?.message || String(error)}`, 'error');
+      }
+    }
+
+    function isValidApiKey(key) {
+      return typeof key === 'string' && key.trim().length > 10;
+    }
+
+    async function askGemini(promptText) {
+      const key = (localStorage.getItem(LS_KEY) || '').trim();
+      if (!key || !isValidApiKey(key)) {
+        setStatus('API key is missing or invalid. Save a valid Google AI Studio key first.', 'error');
+        return;
+      }
+
+      if (!genai) {
+        await initGenAI();
+      }
+
+      if (!genai) {
+        return;
+      }
+
+      const modelName = modelEl.value || currentModel || DEFAULT_MODEL;
+      localStorage.setItem(LS_MODEL, modelName);
+      currentModel = modelName;
+
+      appendMessage('user', promptText);
+      const assistantMessage = document.createElement('div');
+      assistantMessage.className = 'msg assistant';
+      assistantMessage.textContent = 'Thinking...';
+      chatEl.appendChild(assistantMessage);
+      chatEl.scrollTop = chatEl.scrollHeight;
+
+      try {
+        abortController = new AbortController();
+        const response = await genai.models.generateContent({
+          model: modelName,
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: promptText }],
+            },
+          ],
+          config: {
+            systemInstruction: 'You are J.A.R.V.I.S, a helpful and professional AI assistant. Keep responses concise, clear, and useful.',
+          },
+        });
+
+        const answer = response?.text || 'No response returned.';
+        assistantMessage.textContent = answer;
+        setStatus('Response complete.', 'ok');
+      } catch (error) {
+        const msg = error?.message || String(error) || 'Unknown Gemini API error';
+        assistantMessage.textContent = `Error: ${msg}`;
+        setStatus(`Gemini error: ${msg}`, 'error');
+      } finally {
+        abortController = null;
+      }
+    }
+
+    function sendPrompt() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = '';
+      askGemini(text);
+    }
+
+    inputEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendPrompt();
+      }
     });
-    $('#camAnal').innerHTML=renderMarkdown(resp.text||'(empty)');
-  }catch(e){$('#camAnal').textContent='Error: '+e.message;}
-};
-window.camFullscreen=()=>{$('#camVideo').requestFullscreen?.();};
-window.camFlash=async()=>{
-  if(!camStream)return;
-  const tr=camStream.getVideoTracks()[0];
-  const cap=tr.getCapabilities?.();
-  if(cap?.torch){const s=tr.getSettings();try{await tr.applyConstraints({advanced:[{torch:!s.torch}]});toast('Flash '+(!s.torch?'on':'off'));}catch(e){toast('Flash unsupported');}}
-  else toast('Flash unsupported');
-};
-window.camQR=()=>{
-  if(!window.__lastCap){camCapture();}
-  setTimeout(()=>{
-    const c=$('#camCanvas');const ctx=c.getContext('2d');
-    const img=ctx.getImageData(0,0,c.width,c.height);
-    const code=jsQR(img.data,img.width,img.height);
-    if(code) openModal('QR / Barcode',`<div class="mono" style="word-wrap:break-word;">${escapeHtml(code.data)}</div>`,`<button class="btn" onclick="navigator.clipboard.writeText(${JSON.stringify(code.data)});toast('Copied');">Copy</button><button class="btn primary" onclick="closeModal()">OK</button>`);
-    else toast('No QR detected');
-  },200);
-};
 
-/* ==================== FILES ==================== */
-const filesDrop=$('#filesDrop'),fileInput=$('#fileInput');
-filesDrop.addEventListener('click',()=>fileInput.click());
-['dragenter','dragover'].forEach(e=>filesDrop.addEventListener(e,ev=>{ev.preventDefault();filesDrop.classList.add('drag');}));
-['dragleave','drop'].forEach(e=>filesDrop.addEventListener(e,ev=>{ev.preventDefault();filesDrop.classList.remove('drag');}));
-filesDrop.addEventListener('drop',ev=>handleFiles(ev.dataTransfer.files));
-fileInput.addEventListener('change',ev=>handleFiles(ev.target.files));
-async function handleFiles(files){
-  for(const f of files){
-    const el=document.createElement('div');el.className='file-item';
-    const ic=iconFor(f.name);
-    el.innerHTML=`<i class="fas ${ic}"></i><div class="name">${escapeHtml(f.name)}</div><div class="size">${fmtSize(f.size)}</div><button class="btn" data-act="analyze"><i class="fas fa-wand-magic-sparkles"></i> Analyze</button>`;
-    $('#fileList').prepend(el);
-    el.querySelector('[data-act="analyze"]').onclick=async()=>{
-      toast('Analyzing '+f.name);
-      const parts=await fileToParts(f);
-      if(!getActive()) newChat();
-      const c=getActive();
-      c.messages.push({role:'user',content:`Analyze this file: ${f.name}`,ts:Date.now()});
-      const msg={role:'assistant',content:'',ts:Date.now()};c.messages.push(msg);
-      showPage('chat');renderChat();
-      const bubble=$('#chatScroll').lastElementChild.querySelector('.bubble');
-      bubble.innerHTML=`<span class="thinking"><span></span><span></span><span></span></span>`;
-      await geminiStream(c.messages.slice(0,-1),
-        (ch,full)=>{msg.content=full;bubble.innerHTML=renderMarkdown(full);},
-        (full)=>{msg.content=full;persistChats();},
-        (err)=>{bubble.innerHTML='Error: '+escapeHtml(err);},
-        parts
-      );
-    };
-  }
-}
-function iconFor(n){n=n.toLowerCase();if(n.endsWith('.pdf'))return'fa-file-pdf';if(/\.(docx?|odt)$/.test(n))return'fa-file-word';if(/\.(xlsx?|csv)$/.test(n))return'fa-file-csv';if(n.endsWith('.json'))return'fa-file-code';if(n.endsWith('.zip'))return'fa-file-zipper';if(/\.(png|jpe?g|gif|webp|bmp)$/.test(n))return'fa-file-image';return'fa-file';}
-function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB';}
-async function fileToParts(f){
-  const parts=[];
-  if(/^image\//.test(f.type)){
-    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(f);});
-    parts.push({inlineData:{mimeType:f.type,data:b64}});
-  }else{
-    const txt=await f.text().catch(()=>'(binary)');
-    parts.push({text:`\n\n---FILE:${f.name}---\n`+txt.slice(0,60000)});
-  }
-  return parts;
-}
+    document.getElementById('saveBtn').addEventListener('click', saveApiKey);
+    document.getElementById('clearBtn').addEventListener('click', clearApiKey);
+    document.getElementById('sendBtn').addEventListener('click', sendPrompt);
 
-/* ==================== TERMINAL ==================== */
-const termHist=[];let termHistIdx=-1;
-function termPrint(html,cls=''){const o=$('#termOut');const s=document.createElement('div');s.className=cls;s.innerHTML=html;o.appendChild(s);o.scrollTop=o.scrollHeight;}
-function termKey(e){
-  const inp=$('#termIn');
-  if(e.key==='Enter'){
-    const cmd=inp.value.trim();inp.value='';
-    if(!cmd)return;
-    termHist.push(cmd);termHistIdx=termHist.length;
-    termPrint(`<span class="prompt">jarvis@ta9:~$</span> ${escapeHtml(cmd)}`);
-    runCmd(cmd);
-  }else if(e.key==='ArrowUp'){if(termHistIdx>0){termHistIdx--;inp.value=termHist[termHistIdx];}}
-  else if(e.key==='ArrowDown'){if(termHistIdx<termHist.length-1){termHistIdx++;inp.value=termHist[termHistIdx];}else{termHistIdx=termHist.length;inp.value='';}}
-}
-window.termKey=termKey;
-async function runCmd(raw){
-  const [cmd,...args]=raw.split(/\s+/);
-  const arg=args.join(' ');
-  switch(cmd){
-    case 'help': termPrint(`Commands: help, clear, date, time, battery, weather, network, camera, settings, history, calc &lt;expr&gt;, search &lt;q&gt;, open &lt;page&gt;, close, jarvis &lt;prompt&gt;, system, reboot, shutdown, fullscreen, theme &lt;dark|light&gt;, music, news, translate &lt;text&gt;, summarize &lt;text&gt;, code &lt;prompt&gt;`,'out');break;
-    case 'clear': $('#termOut').innerHTML='';break;
-    case 'date': termPrint(new Date().toString(),'out');break;
-    case 'time': termPrint(new Date().toLocaleTimeString(),'out');break;
-    case 'battery': termPrint($('#batV').textContent,'out');break;
-    case 'weather': termPrint($('#wxT').textContent+' — '+$('#wxD').textContent,'out');break;
-    case 'network': termPrint($('#netV').textContent+' — '+$('#netD').textContent,'out');break;
-    case 'camera': showPage('camera');termPrint('Opening camera…','ok');break;
-    case 'settings': openSettings();termPrint('Settings opened','ok');break;
-    case 'history': termPrint(termHist.map((c,i)=>`${i+1}. ${c}`).join('\n'),'out');break;
-    case 'calc': try{termPrint(String(Function('"use strict";return('+arg+')')()),'out');}catch{termPrint('Bad expression','err');}break;
-    case 'search': window.open('https://www.google.com/search?q='+encodeURIComponent(arg),'_blank');termPrint('Opened search','ok');break;
-    case 'open':{const p=arg.toLowerCase();if(['home','chat','voice','camera','files','terminal','tools','dash'].includes(p)){showPage(p);termPrint('Opened '+p,'ok');}else termPrint('Unknown page','err');}break;
-    case 'close': closeModal();camStop();termPrint('Closed','ok');break;
-    case 'system':{const info=`UA: ${navigator.userAgent}\nCores: ${navigator.hardwareConcurrency}\nLang: ${navigator.language}\nOnline: ${navigator.onLine}\nMem: ${navigator.deviceMemory||'n/a'} GB`;termPrint(info,'out');}break;
-    case 'reboot': termPrint('Rebooting UI…','ok');setTimeout(()=>location.reload(),600);break;
-    case 'shutdown': termPrint('Shutdown requested. Goodnight, Director.','ok');document.body.style.transition='opacity 1s';document.body.style.opacity='0';setTimeout(()=>location.replace('about:blank'),1200);break;
-    case 'fullscreen': $('#btnFullscreen').click();termPrint('Toggled fullscreen','ok');break;
-    case 'theme': applyTheme(arg==='light'?'light':'dark');termPrint('Theme: '+(arg||'dark'),'ok');break;
-    case 'music': window.open('https://music.youtube.com/','_blank');termPrint('Opening music','ok');break;
-    case 'news': window.open('https://news.google.com/','_blank');termPrint('Opening news','ok');break;
-    case 'jarvis': case 'translate': case 'summarize': case 'code':{
-      if(!genai){const ok=await askKeyIfNeeded();if(!ok){termPrint('API key required','err');return;}}
-      let prompt=arg;
-      if(cmd==='translate') prompt='Translate to English (or detect target): '+arg;
-      if(cmd==='summarize') prompt='Summarize: '+arg;
-      if(cmd==='code') prompt='Write code for: '+arg;
-      termPrint('… thinking …','out');
-      try{
-        const resp=await genai.models.generateContent({model:currentModel||'gemini-2.5-flash',contents:prompt,config:{systemInstruction:SYSTEM_PROMPT}});
-        termPrint(escapeHtml(resp.text||'(empty)'),'out');
-      }catch(e){termPrint('Error: '+e.message,'err');}
-    }break;
-    default: termPrint('Unknown command: '+cmd+' — try "help"','err');
-  }
-}
-
-/* ==================== TOOLS ==================== */
-function openTool(name){
-  switch(name){
-    case 'calc': return openCalc();
-    case 'notes': return openNotes();
-    case 'todo': return openTodo();
-    case 'calendar': return openCalendar();
-    case 'alarm': return openAlarm();
-    case 'stopwatch': return openStopwatch();
-    case 'timer': return openTimer();
-    case 'unit': return openUnit();
-    case 'currency': return openCurrency();
-    case 'translate': return openTranslator();
-    case 'qrgen': return openQRGen();
-    case 'qrscan': showPage('camera');setTimeout(camQR,600);break;
-    case 'clip': return openClip();
-    case 'draw': return openDraw();
-    case 'md': return openMarkdown();
-    case 'json': return openJson();
-    case 'pass': return openPass();
-    case 'color': return openColor();
-    case 'gradient': return openGradient();
-    case 'regex': return openRegex();
-  }
-}
-window.openTool=openTool;
-
-function openCalc(){
-  let expr='';
-  openModal('Calculator',`<div class="calc" id="calc">
-    <div class="display" id="calcD">0</div>
-    <button onclick="calcC()">C</button><button onclick="calcBk()">⌫</button><button class="op" onclick="calcAdd('%')">%</button><button class="op" onclick="calcAdd('/')">÷</button>
-    <button onclick="calcAdd('7')">7</button><button onclick="calcAdd('8')">8</button><button onclick="calcAdd('9')">9</button><button class="op" onclick="calcAdd('*')">×</button>
-    <button onclick="calcAdd('4')">4</button><button onclick="calcAdd('5')">5</button><button onclick="calcAdd('6')">6</button><button class="op" onclick="calcAdd('-')">−</button>
-    <button onclick="calcAdd('1')">1</button><button onclick="calcAdd('2')">2</button><button onclick="calcAdd('3')">3</button><button class="op" onclick="calcAdd('+')">+</button>
-    <button onclick="calcAdd('0')">0</button><button onclick="calcAdd('.')">.</button><button class="eq" onclick="calcEq()">=</button>
-  </div>`);
-  window.calcAdd=(c)=>{expr+=c;$('#calcD').textContent=expr;};
-  window.calcC=()=>{expr='';$('#calcD').textContent='0';};
-  window.calcBk=()=>{expr=expr.slice(0,-1);$('#calcD').textContent=expr||'0';};
-  window.calcEq=()=>{try{const r=Function('"use strict";return('+expr+')')();$('#calcD').textContent=r;expr=String(r);}catch{$('#calcD').textContent='Error';expr='';}};
-}
-function openNotes(){
-  const notes=LS.get('jarvis.notes',[]);
-  openModal('Notes',`<div class="col gap8"><textarea id="noteIn" placeholder="Write a note…" style="min-height:80px;"></textarea><button class="btn primary" onclick="addNote()">Add note</button><div id="notesList" class="list-block"></div></div>`);
-  window.renderNotes=()=>{$('#notesList').innerHTML=notes.map((n,i)=>`<div class="item"><div class="txt">${escapeHtml(n)}</div><button onclick="delNote(${i})"><i class="fas fa-trash"></i></button></div>`).join('');};
-  window.addNote=()=>{const v=$('#noteIn').value.trim();if(!v)return;notes.unshift(v);LS.set('jarvis.notes',notes);$('#noteIn').value='';renderNotes();};
-  window.delNote=(i)=>{notes.splice(i,1);LS.set('jarvis.notes',notes);renderNotes();};
-  renderNotes();
-}
-function openTodo(){
-  const todos=LS.get('jarvis.todos',[]);
-  openModal('Todo',`<div class="col gap8"><div class="row gap8"><input id="tdIn" placeholder="New task…" style="flex:1;"/><button class="btn primary" onclick="addTd()">Add</button></div><div id="tdList" class="list-block"></div></div>`);
-  window.renderTd=()=>{$('#tdList').innerHTML=todos.map((t,i)=>`<div class="item ${t.done?'done':''}"><input class="chk" type="checkbox" ${t.done?'checked':''} onchange="toggleTd(${i})"><div class="txt">${escapeHtml(t.text)}</div><button onclick="delTd(${i})"><i class="fas fa-trash"></i></button></div>`).join('');renderDashTasks();};
-  window.addTd=()=>{const v=$('#tdIn').value.trim();if(!v)return;todos.unshift({text:v,done:false});LS.set('jarvis.todos',todos);$('#tdIn').value='';renderTd();};
-  window.toggleTd=(i)=>{todos[i].done=!todos[i].done;LS.set('jarvis.todos',todos);renderTd();};
-  window.delTd=(i)=>{todos.splice(i,1);LS.set('jarvis.todos',todos);renderTd();};
-  renderTd();
-}
-function renderDashTasks(){
-  const t=LS.get('jarvis.todos',[]);
-  $('#dashTasks').innerHTML=t.slice(0,6).map(x=>`<div class="row" style="justify-content:space-between;"><span>${x.done?'✓ ':''}${escapeHtml(x.text)}</span><span class="chip">${x.done?'done':'todo'}</span></div>`).join('')||'<div class="row dim">No tasks</div>';
-}
-function openCalendar(){
-  const d=new Date();const y=d.getFullYear(),m=d.getMonth();
-  const first=new Date(y,m,1).getDay();const days=new Date(y,m+1,0).getDate();
-  let html=`<div class="row" style="justify-content:space-between;"><h3 style="margin:0;">${d.toLocaleString('default',{month:'long'})} ${y}</h3></div>`;
-  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;">';
-  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(x=>html+=`<div class="dim small center" style="padding:6px;">${x}</div>`);
-  for(let i=0;i<first;i++)html+='<div></div>';
-  for(let i=1;i<=days;i++){const today=i===d.getDate();html+=`<div class="center" style="padding:10px;border-radius:10px;background:${today?'linear-gradient(135deg,var(--accent),var(--accent-2))':'rgba(255,255,255,.04)'};color:${today?'#04070d':'var(--text)'};font-weight:${today?700:400}">${i}</div>`;}
-  html+='</div>';
-  openModal('Calendar',html);
-}
-function openAlarm(){
-  openModal('Alarm',`<label>Ring at (HH:MM 24h)</label><input id="alTime" type="time" /><button class="btn primary" style="margin-top:10px;" onclick="setAlarm()">Set alarm</button><div class="dim small" style="margin-top:8px;">Runs while tab is open.</div>`);
-  window.setAlarm=()=>{const t=$('#alTime').value;if(!t)return;const [h,m]=t.split(':').map(Number);const now=new Date();const target=new Date();target.setHours(h,m,0,0);if(target<now)target.setDate(target.getDate()+1);const ms=target-now;toast('Alarm set for '+t);setTimeout(()=>{speak('Director, your alarm is ringing.');alert('⏰ Alarm '+t);},ms);closeModal();};
-}
-function openStopwatch(){
-  openModal('Stopwatch',`<div class="center col gap8"><div id="swD" class="mono" style="font-size:44px;color:var(--accent);">00:00.000</div><div class="row gap8"><button class="btn primary" onclick="swStart()">Start</button><button class="btn" onclick="swStop()">Stop</button><button class="btn" onclick="swRst()">Reset</button></div></div>`);
-  let st=0,el=0,iv=null;
-  window.swStart=()=>{if(iv)return;st=performance.now()-el;iv=setInterval(()=>{el=performance.now()-st;const s=Math.floor(el/1000);const ms=Math.floor(el%1000);$('#swD').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;},30);};
-  window.swStop=()=>{clearInterval(iv);iv=null;};
-  window.swRst=()=>{clearInterval(iv);iv=null;el=0;$('#swD').textContent='00:00.000';};
-}
-function openTimer(){
-  openModal('Countdown',`<label>Minutes</label><input id="tmMin" type="number" value="5" min="0" /><label>Seconds</label><input id="tmSec" type="number" value="0" min="0" max="59" /><div class="center" style="margin:12px 0;"><div id="tmD" class="mono" style="font-size:44px;color:var(--accent);">05:00</div></div><div class="center row gap8"><button class="btn primary" onclick="tmStart()">Start</button><button class="btn" onclick="tmStop()">Stop</button></div>`);
-  let iv=null,left=0;
-  window.tmStart=()=>{if(iv)return;left=(+$('#tmMin').value)*60+(+$('#tmSec').value);iv=setInterval(()=>{if(left<=0){clearInterval(iv);iv=null;speak('Timer complete, Director.');toast('Timer done!');return;}left--;$('#tmD').textContent=`${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')}`;},1000);};
-  window.tmStop=()=>{clearInterval(iv);iv=null;};
-}
-function openUnit(){
-  const units={length:{m:1,km:1000,cm:.01,mi:1609.34,ft:.3048,in:.0254},weight:{kg:1,g:.001,lb:.4536,oz:.02835},temp:{}};
-  openModal('Unit Converter',`<label>Category</label><select id="uCat"><option>length</option><option>weight</option><option>temperature</option></select><label>Value</label><input id="uV" type="number" value="1" /><div class="row gap8"><div class="flex1"><label>From</label><select id="uF"></select></div><div class="flex1"><label>To</label><select id="uT"></select></div></div><div class="mono" style="margin-top:12px;font-size:22px;color:var(--accent);text-align:center;" id="uR">—</div>`);
-  function fill(){const cat=$('#uCat').value;const list=cat==='temperature'?['C','F','K']:Object.keys(units[cat==='length'?'length':'weight']);$('#uF').innerHTML=list.map(x=>`<option>${x}</option>`).join('');$('#uT').innerHTML=$('#uF').innerHTML;calc();}
-  function calc(){const cat=$('#uCat').value;const v=+$('#uV').value;const f=$('#uF').value;const t=$('#uT').value;let out;
-    if(cat==='temperature'){let c=f==='C'?v:f==='F'?(v-32)*5/9:v-273.15;out=t==='C'?c:t==='F'?c*9/5+32:c+273.15;}
-    else{const k=cat==='length'?'length':'weight';out=v*units[k][f]/units[k][t];}
-    $('#uR').textContent=(+out.toFixed(6))+' '+t;}
-  ['change','input'].forEach(e=>{$('#uCat').addEventListener(e,fill);$('#uV').addEventListener(e,calc);$('#uF').addEventListener(e,calc);$('#uT').addEventListener(e,calc);});
-  fill();
-}
-async function openCurrency(){
-  openModal('Currency',`<div class="row gap8"><input id="cAmt" type="number" value="100" /><select id="cF"></select><i class="fas fa-arrow-right dim"></i><select id="cT"></select></div><div id="cR" class="mono" style="margin-top:14px;font-size:22px;color:var(--accent);text-align:center;">—</div>`);
-  const list=['USD','EUR','GBP','INR','JPY','AUD','CAD','CNY','CHF','KRW','BRL','MXN'];
-  $('#cF').innerHTML=list.map(c=>`<option>${c}</option>`).join('');$('#cT').innerHTML=$('#cF').innerHTML;$('#cT').value='EUR';
-  async function calc(){try{const f=$('#cF').value;const t=$('#cT').value;const a=+$('#cAmt').value;const r=await fetch(`https://api.frankfurter.app/latest?from=${f}&to=${t}&amount=${a}`);const j=await r.json();$('#cR').textContent=j.rates[t]+' '+t;}catch{$('#cR').textContent='Unavailable';}}
-  ['input','change'].forEach(e=>{$('#cAmt').addEventListener(e,calc);$('#cF').addEventListener(e,calc);$('#cT').addEventListener(e,calc);});
-  calc();
-}
-function openTranslator(){
-  openModal('Translator',`<label>Text</label><textarea id="trIn" placeholder="Type text…" style="min-height:80px;"></textarea><label>Target language</label><input id="trLang" value="French" /><button class="btn primary" style="margin-top:10px;" onclick="doTrans()">Translate</button><div id="trOut" class="mono" style="margin-top:12px;color:var(--accent);white-space:pre-wrap;"></div>`);
-  window.doTrans=async()=>{if(!genai){const ok=await askKeyIfNeeded();if(!ok)return;}$('#trOut').textContent='…';try{const r=await genai.models.generateContent({model:currentModel||'gemini-2.5-flash',contents:`Translate to ${$('#trLang').value}:\n\n${$('#trIn').value}`,config:{systemInstruction:'You are a translator. Reply with only the translation.'}});$('#trOut').textContent=r.text;}catch(e){$('#trOut').textContent='Error: '+e.message;}};
-}
-function openQRGen(){
-  openModal('QR Generator',`<label>Text or URL</label><input id="qrIn" placeholder="https://…" value="https://jarvis.local" /><button class="btn primary" style="margin-top:10px;" onclick="genQR()">Generate</button><div class="qr-out" id="qrOut" style="margin-top:12px;"></div>`);
-  window.genQR=()=>{$('#qrOut').innerHTML='';QRCode.toCanvas($('#qrIn').value||' ',{width:220,margin:1},(err,c)=>{if(!err)$('#qrOut').appendChild(c);});};
-  setTimeout(genQR,100);
-}
-function openClip(){
-  const items=LS.get('jarvis.clip',[]);
-  openModal('Clipboard',`<div class="col gap8"><div class="row gap8"><input id="clIn" placeholder="Add snippet…" style="flex:1;"/><button class="btn primary" onclick="addClip()">Save</button></div><div id="clList" class="list-block"></div></div>`);
-  window.renderClip=()=>{$('#clList').innerHTML=items.map((c,i)=>`<div class="item"><div class="txt mono" style="font-size:12px;">${escapeHtml(c)}</div><button onclick="navigator.clipboard.writeText(${JSON.stringify(c)});toast('Copied');"><i class="fas fa-copy" style="color:var(--accent)"></i></button><button onclick="delClip(${i})"><i class="fas fa-trash"></i></button></div>`).join('');};
-  window.addClip=()=>{const v=$('#clIn').value.trim();if(!v)return;items.unshift(v);LS.set('jarvis.clip',items);$('#clIn').value='';renderClip();};
-  window.delClip=(i)=>{items.splice(i,1);LS.set('jarvis.clip',items);renderClip();};
-  renderClip();
-}
-function openDraw(){
-  openModal('Drawing',`<div class="row gap8" style="margin-bottom:8px;"><input type="color" id="dC" value="#00e5ff" /><input type="range" id="dS" min="1" max="30" value="4" /><button class="btn" onclick="dClr()">Clear</button><button class="btn primary" onclick="dSave()">Save PNG</button></div><canvas id="drawCanvas" width="900" height="500"></canvas>`);
-  setTimeout(()=>{
-    const c=$('#drawCanvas');const ctx=c.getContext('2d');ctx.fillStyle='#0a0f1c';ctx.fillRect(0,0,c.width,c.height);let drawing=false,last=null;
-    function pos(e){const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(c.width/r.width),y:(t.clientY-r.top)*(c.height/r.height)};}
-    function down(e){drawing=true;last=pos(e);e.preventDefault();}
-    function move(e){if(!drawing)return;const p=pos(e);ctx.strokeStyle=$('#dC').value;ctx.lineWidth=+$('#dS').value;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;e.preventDefault();}
-    function up(){drawing=false;}
-    c.addEventListener('mousedown',down);c.addEventListener('mousemove',move);addEventListener('mouseup',up);
-    c.addEventListener('touchstart',down);c.addEventListener('touchmove',move);c.addEventListener('touchend',up);
-    window.dClr=()=>{ctx.fillStyle='#0a0f1c';ctx.fillRect(0,0,c.width,c.height);};
-    window.dSave=()=>{const a=document.createElement('a');a.download='drawing.png';a.href=c.toDataURL();a.click();};
-  },50);
-}
-function openMarkdown(){
-  openModal('Markdown Editor',`<div class="row gap8" style="height:400px;"><textarea id="mdIn" style="flex:1;height:100%;" placeholder="# Hello"></textarea><div id="mdOut" class="glass" style="flex:1;padding:12px;overflow-y:auto;"></div></div>`);
-  const upd=()=>$('#mdOut').innerHTML=renderMarkdown($('#mdIn').value);
-  $('#mdIn').addEventListener('input',upd);$('#mdIn').value='# Hello, Director\n\n- List item\n- Another\n\n```js\nconsole.log("Hi");\n```';upd();
-}
-function openJson(){
-  openModal('JSON Viewer',`<textarea id="jIn" placeholder='{"key":"value"}' style="min-height:120px;"></textarea><button class="btn primary" style="margin-top:8px;" onclick="jFmt()">Format</button><pre id="jOut" style="background:rgba(0,0,0,.4);padding:10px;border-radius:10px;overflow-x:auto;font-size:12px;max-height:280px;overflow-y:auto;"></pre>`);
-  window.jFmt=()=>{try{const o=JSON.parse($('#jIn').value);$('#jOut').textContent=JSON.stringify(o,null,2);}catch(e){$('#jOut').textContent='Invalid JSON: '+e.message;}};
-}
-function openPass(){
-  openModal('Password Generator',`<label>Length</label><input id="pL" type="number" value="16" min="4" max="128" /><div class="row gap8"><label class="row gap8"><input type="checkbox" id="pU" checked> Upper</label><label class="row gap8"><input type="checkbox" id="pLo" checked> Lower</label><label class="row gap8"><input type="checkbox" id="pN" checked> Numbers</label><label class="row gap8"><input type="checkbox" id="pS" checked> Symbols</label></div><button class="btn primary" style="margin-top:10px;" onclick="pGen()">Generate</button><div id="pOut" class="mono" style="margin-top:12px;padding:10px;background:rgba(0,0,0,.35);border-radius:10px;word-wrap:break-word;color:var(--accent);"></div>`);
-  window.pGen=()=>{let s='';if($('#pU').checked)s+='ABCDEFGHIJKLMNOPQRSTUVWXYZ';if($('#pLo').checked)s+='abcdefghijklmnopqrstuvwxyz';if($('#pN').checked)s+='0123456789';if($('#pS').checked)s+='!@#$%^&*()_+-=[]{}';let out='';const n=+$('#pL').value;for(let i=0;i<n;i++)out+=s[Math.floor(Math.random()*s.length)];$('#pOut').textContent=out;};
-  pGen();
-}
-function openColor(){
-  openModal('Color Picker',`<input id="colIn" type="color" value="#00e5ff" style="width:100px;height:60px;" /><div id="colOut" class="mono" style="margin-top:10px;"></div>`);
-  const upd=()=>{const v=$('#colIn').value;const rgb=[parseInt(v.slice(1,3),16),parseInt(v.slice(3,5),16),parseInt(v.slice(5,7),16)];$('#colOut').innerHTML=`HEX: ${v}<br>RGB: ${rgb.join(', ')}<br>CSS: rgb(${rgb.join(',')})`;};
-  $('#colIn').addEventListener('input',upd);upd();
-}
-function openGradient(){
-  openModal('Gradient Generator',`<div class="row gap8"><input type="color" id="g1" value="#00e5ff"/><input type="color" id="g2" value="#7c4dff"/><input id="gA" type="number" value="135" style="width:80px;"/></div><div id="gPrev" style="height:120px;border-radius:12px;margin-top:12px;"></div><div id="gOut" class="mono" style="margin-top:8px;"></div>`);
-  const upd=()=>{const css=`linear-gradient(${$('#gA').value}deg, ${$('#g1').value}, ${$('#g2').value})`;$('#gPrev').style.background=css;$('#gOut').textContent='background: '+css+';';};
-  ['input','change'].forEach(e=>{$('#g1').addEventListener(e,upd);$('#g2').addEventListener(e,upd);$('#gA').addEventListener(e,upd);});upd();
-}
-function openRegex(){
-  openModal('Regex Tester',`<label>Pattern</label><input id="rP" value="\\b\\w+\\b" /><label>Flags</label><input id="rF" value="g" /><label>Text</label><textarea id="rT" style="min-height:100px;">Hello Director, JARVIS online.</textarea><button class="btn primary" style="margin-top:8px;" onclick="rTest()">Test</button><pre id="rOut" style="background:rgba(0,0,0,.35);padding:10px;border-radius:10px;font-size:12px;margin-top:10px;max-height:200px;overflow:auto;"></pre>`);
-  window.rTest=()=>{try{const re=new RegExp($('#rP').value,$('#rF').value);const m=[...$('#rT').value.matchAll(re)];$('#rOut').textContent=m.length?m.map((x,i)=>`${i}: ${x[0]}`).join('\n'):'No matches';}catch(e){$('#rOut').textContent='Error: '+e.message;}};
-}
-
-/* ==================== DASHBOARD ==================== */
-async function refreshDash(){
-  renderDashTasks();
-  $('#dashCal').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-  $('#dashNote').value=LS.get('jarvis.note','');
-  // Fake headlines (no CORS-free universal API); provide static tips
-  $('#dashNews').innerHTML=[
-    'Global markets steady amid tech rally',
-    'AI adoption accelerates in enterprise',
-    'Space launch scheduled for later today',
-    'New GPU announced with 2× perf per watt'
-  ].map(h=>`<div class="row" style="justify-content:space-between;"><span>${h}</span><span class="chip">news</span></div>`).join('');
-  // Crypto (public API)
-  try{
-    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
-    const j=await r.json();
-    const rows=[['BTC','bitcoin'],['ETH','ethereum'],['SOL','solana']];
-    $('#dashCrypto').innerHTML=rows.map(([s,k])=>{const p=j[k];const chg=p.usd_24h_change;const col=chg>=0?'var(--success)':'var(--danger)';return `<div class="row" style="justify-content:space-between;"><span>${s}</span><span class="chip" style="color:${col}">$${p.usd.toLocaleString()} (${chg.toFixed(2)}%)</span></div>`;}).join('');
-  }catch{}
-  // Stocks — no free CORS-friendly source; placeholder
-  $('#dashStocks').innerHTML=['AAPL','MSFT','GOOGL','NVDA'].map(t=>`<div class="row" style="justify-content:space-between;"><span>${t}</span><span class="chip">live via API</span></div>`).join('');
-}
-
-/* ==================== INIT ==================== */
-document.addEventListener('DOMContentLoaded',async()=>{
-  if(chats.length===0){ newChat(); }
-  else{
-    if(!activeChatId||!getActive()) activeChatId=chats[0].id;
-    renderChatList();renderChat();
-  }
-  await initGenAI();
-  if(!LS.get('jarvis.apiKey','')){ setTimeout(askKeyIfNeeded,600); }
-  refreshDash();
-  // populate voices when they load
-  speechSynthesis.onvoiceschanged=()=>{};
-});
-
-/* Keyboard shortcuts */
-document.addEventListener('keydown',(e)=>{
-  if(e.ctrlKey||e.metaKey){
-    if(e.key==='k'){e.preventDefault();showPage('chat');$('#chatInput').focus();}
-    if(e.key==='/'){e.preventDefault();openSettings();}
-    if(e.key==='.'){e.preventDefault();toggleListen();}
-  }
-  if(e.key==='Escape'){closeModal();}
-});
-
-/* Prevent context menu on long-press interfering (tablet) */
-document.addEventListener('contextmenu',e=>{if(!/INPUT|TEXTAREA/.test(e.target.tagName))e.preventDefault();});
-
-/* Service worker (best-effort inline) */
-if('serviceWorker' in navigator && location.protocol==='https:'){
-  const swCode=`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{});`;
-  try{
-    const blob=new Blob([swCode],{type:'text/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-  }catch{}
-}
-
-/* Install prompt */
-let deferred;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;toast('Tap Settings to install JARVIS');});
-</script>
+    apiKeyEl.value = localStorage.getItem(LS_KEY) || '';
+    modelEl.value = localStorage.getItem(LS_MODEL) || DEFAULT_MODEL;
+    initGenAI();
+  </script>
 </body>
 </html>
