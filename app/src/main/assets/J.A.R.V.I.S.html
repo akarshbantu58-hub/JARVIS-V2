@@ -997,53 +997,55 @@ async function runAssistant(){
 window.stopGen=()=>{abortCtl?.abort();$('#sendBtn').disabled=false;$('#stopBtn').style.display='none';};
 
 /* ==================== VOICE ==================== */
-let recog=null,listening=false,wakeMode=false,voiceAutoSpeak=true;function ensureRecog(){
+let recog=null,listening=false,wakeMode=false,voiceAutoSpeak=true;
+function nativeVoiceAvailable(){return !!(window.AndroidJARVIS&&typeof window.AndroidJARVIS.startListening==='function');}
+function handleVoiceText(txt){
+  txt=(txt||'').trim(); if(!txt)return;
+  $('#voiceTx').textContent=txt;
+  if(wakeMode){
+    const wake=LS.get('jarvis.wake','hey jarvis');
+    const low=txt.toLowerCase(), w=wake.toLowerCase();
+    if(low.includes(w)){
+      const after=low.split(w)[1]?.trim();
+      if(after){sendVoiceQuery(after);}else{speak('Yes, Director?');}
+    }
+  }else sendVoiceQuery(txt);
+}
+window.__nativeSpeechResult=(txt,isFinal)=>{if(isFinal)handleVoiceText(txt);else $('#voiceTx').textContent=txt||'—';};
+window.__nativeSpeechError=(err)=>{$('#voiceStat').textContent='ERROR: '+(err||'speech');};
+window.__nativeSpeechEnded=()=>{if(listening&&nativeVoiceAvailable()){setTimeout(()=>{try{window.AndroidJARVIS.startListening(navigator.language||'en-US');}catch{}},180);}else{$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';}};
+function ensureRecog(){
+  if(nativeVoiceAvailable()) return window.AndroidJARVIS;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
   if(recog)return recog;
   recog=new SR();
   recog.lang=navigator.language||'en-US';
-  recog.continuous=true;
-  recog.interimResults=true;
-  recog.onresult=(e)=>{
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript;
-      if(e.results[i].isFinal) final+=t; else interim+=t;
-    }
-    $('#voiceTx').textContent=(final||interim||'—');
-    if(final){
-      const txt=final.trim();
-      if(wakeMode){
-        const wake=LS.get('jarvis.wake','hey jarvis');
-        if(txt.toLowerCase().includes(wake)){
-          const after=txt.toLowerCase().split(wake)[1]?.trim();
-          if(after){sendVoiceQuery(after);}else{speak('Yes, Director?');}
-        }
-      }else{
-        sendVoiceQuery(txt);
-      }
-    }
-  };
+  recog.continuous=true; recog.interimResults=true;
+  recog.onresult=(e)=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t;else interim+=t;}$('#voiceTx').textContent=(final||interim||'—');if(final)handleVoiceText(final);};
   recog.onerror=(e)=>{$('#voiceStat').textContent='ERROR: '+e.error;};
-  recog.onend=()=>{if(listening){try{recog.start();}catch{}}else{$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent='TAP TO SPEAK';}};
+  recog.onend=()=>{if(listening){try{recog.start();}catch{}}else{$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';}};
   return recog;
 }
-function toggleListen(){
-  const r=ensureRecog();if(!r){toast('Speech recognition not supported');return;}
-  if(listening){listening=false;r.stop();}
-  else{listening=true;try{r.start();$('#voiceOrb').classList.add('listening');$('#voiceStat').textContent='LISTENING…';}catch{}}
+function startVoiceListening(){
+  const r=ensureRecog(); if(!r){toast('Speech recognition not supported on this device');return false;}
+  listening=true; $('#voiceOrb').classList.add('listening'); $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'LISTENING…';
+  try{if(nativeVoiceAvailable()) r.startListening(navigator.language||'en-US'); else r.start();return true;}catch{return false;}
 }
+function stopVoiceListening(){
+  listening=false;
+  try{if(nativeVoiceAvailable())window.AndroidJARVIS.stopListening();else recog?.stop();}catch{}
+  $('#voiceOrb').classList.remove('listening'); $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'TAP TO SPEAK';
+}
+function toggleListen(){if(listening)stopVoiceListening();else startVoiceListening();}
 window.toggleListen=toggleListen;
 let pttActive=false;
-window.startPTT=()=>{const r=ensureRecog();if(!r)return;pttActive=true;listening=true;try{r.start();$('#voiceOrb').classList.add('listening');$('#voiceStat').textContent='PUSH-TO-TALK';}catch{}};
-window.stopPTT=()=>{if(!pttActive)return;pttActive=false;listening=false;try{recog.stop();}catch{}};
+window.startPTT=()=>{pttActive=true;startVoiceListening();$('#voiceStat').textContent='PUSH-TO-TALK';};
+window.stopPTT=()=>{if(!pttActive)return;pttActive=false;stopVoiceListening();};
 window.toggleWake=()=>{
-  wakeMode=!wakeMode;
-  $('#wakeBtn').classList.toggle('active',wakeMode);
-  $('#wakeInd').classList.toggle('on',wakeMode);
-  if(wakeMode){listening=true;try{ensureRecog().start();}catch{}$('#voiceOrb').classList.add('listening');$('#voiceStat').textContent='WAKE MODE ON';}
-  else{listening=false;try{recog?.stop();}catch{}$('#voiceOrb').classList.remove('listening');$('#voiceStat').textContent='WAKE MODE OFF';}
+  wakeMode=!wakeMode; $('#wakeBtn').classList.toggle('active',wakeMode); $('#wakeInd').classList.toggle('on',wakeMode);
+  if(wakeMode)startVoiceListening(); else stopVoiceListening();
+  $('#voiceStat').textContent=wakeMode?'WAKE MODE ON':'WAKE MODE OFF';
 };
 
 async function sendVoiceQuery(txt){
@@ -1059,19 +1061,25 @@ async function sendVoiceQuery(txt){
     (err)=>{$('#voiceStat').textContent='ERROR';toast(err);}
   );
 }
+let nativeSpeakEnd=null;
+window.__nativeSpeakDone=()=>{const cb=nativeSpeakEnd;nativeSpeakEnd=null;cb?.();};
 function speak(text,onEnd){
+  const clean=String(text||'').replace(/[*_\`#>]/g,'');
+  const v=LS.get('jarvis.voice',{});
+  if(window.AndroidJARVIS&&typeof window.AndroidJARVIS.speak==='function'){
+    nativeSpeakEnd=onEnd||null;
+    try{window.AndroidJARVIS.speak(clean,+(v.rate||1),+(v.pitch||1),+(v.volume??1));return;}catch{}
+  }
   try{
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text.replace(/[*_`#>]/g,''));
-    const v=LS.get('jarvis.voice',{});
+    const u=new SpeechSynthesisUtterance(clean);
     const voices=speechSynthesis.getVoices();
     if(v.name){const vv=voices.find(x=>x.name===v.name);if(vv)u.voice=vv;}
-    u.rate=v.rate||1;u.pitch=v.pitch||1;u.volume=v.volume||1;
-    u.onend=onEnd||(()=>{});
-    speechSynthesis.speak(u);
+    u.rate=v.rate||1;u.pitch=v.pitch||1;u.volume=v.volume??1;
+    u.onend=onEnd||(()=>{}); speechSynthesis.speak(u);
   }catch(e){onEnd?.();}
 }
-window.stopSpeak=()=>speechSynthesis.cancel();
+window.stopSpeak=()=>{nativeSpeakEnd=null;try{window.AndroidJARVIS?.stopSpeaking();}catch{}try{speechSynthesis.cancel();}catch{}};
 window.quickVoice=()=>{showPage('voice');setTimeout(toggleListen,300);};
 $('#voiceOrb').addEventListener('click',toggleListen);
 
