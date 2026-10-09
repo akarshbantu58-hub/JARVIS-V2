@@ -3,6 +3,11 @@ package com.akarsh.jarvis;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Vibrator;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -56,6 +61,10 @@ public class MainActivity extends Activity {
         s.setGeolocationEnabled(true); s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         webView.addJavascriptInterface(new JarvisBridge(),"AndroidJARVIS");
         webView.setWebViewClient(new WebViewClient(){
+            @Override public void onPageFinished(WebView v,String url){
+                super.onPageFinished(v,url);
+                v.evaluateJavascript("(function(){if(window.__jarvisNativeCommandsInstalled)return;window.__jarvisNativeCommandsInstalled=true;var old=window.sendVoiceQuery;if(typeof old==='function'){window.sendVoiceQuery=async function(t){var m=String(t||'').trim().match(/^(?:please\\s+)?(?:open|launch|start)\\s+(.+)$/i);if(m&&window.AndroidJARVIS&&window.AndroidJARVIS.openApp(m[1])){var box=document.getElementById('voiceTx');if(box)box.textContent='Opening '+m[1];var st=document.getElementById('voiceStat');if(st)st.textContent='COMMAND COMPLETE';try{window.AndroidJARVIS.speak('Opening '+m[1],1,1,1)}catch(e){}return;}return old(t);};}})();",null);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){
                 Uri u=r.getUrl();
                 if("http".equalsIgnoreCase(u.getScheme())||"https".equalsIgnoreCase(u.getScheme())) return false;
@@ -178,6 +187,40 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void stopListening(){runOnUiThread(()->{nativeListening=false;try{if(speechRecognizer!=null)speechRecognizer.stopListening();}catch(Exception ignored){}});}
         @JavascriptInterface public boolean isAvailable(){return speechRecognizer!=null;}
+        @JavascriptInterface public boolean openApp(String requested){
+            if(requested==null)return false;
+            String n=requested.toLowerCase(Locale.ROOT).trim();
+            String pkg=null;
+            if(n.contains("youtube"))pkg="com.google.android.youtube";
+            else if(n.contains("chrome")||n.contains("browser"))pkg="com.android.chrome";
+            else if(n.contains("camera")){startActivity(new Intent("android.media.action.IMAGE_CAPTURE"));return true;}
+            else if(n.contains("settings")){startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));return true;}
+            else if(n.contains("calculator"))pkg="com.google.android.calculator";
+            else if(n.contains("play store"))pkg="com.android.vending";
+            else if(n.contains("gmail")||n.equals("mail"))pkg="com.google.android.gm";
+            else if(n.contains("maps"))pkg="com.google.android.apps.maps";
+            else if(n.contains("photos"))pkg="com.google.android.apps.photos";
+            else if(n.contains("whatsapp"))pkg="com.whatsapp";
+            else if(n.contains("spotify"))pkg="com.spotify.music";
+            else if(n.contains("clock")||n.contains("alarm"))pkg="com.google.android.deskclock";
+            else if(n.contains("files")||n.contains("my files")){startActivity(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE));return true;}
+            if(pkg==null)return false;
+            try{
+                Intent launch=getPackageManager().getLaunchIntentForPackage(pkg);
+                if(launch==null)return false;
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(launch);return true;
+            }catch(Exception e){return false;}
+        }
+        @JavascriptInterface public void openSettings(){runOnUiThread(()->startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)));}
+        @JavascriptInterface public String getDeviceInfo(){
+            return Build.MANUFACTURER+" "+Build.MODEL+"; Android "+Build.VERSION.RELEASE+"; SDK "+Build.VERSION.SDK_INT;
+        }
+        @JavascriptInterface public void shareText(String text){
+            runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,text);startActivity(Intent.createChooser(i,"Share with"));});
+        }
+        @JavascriptInterface public void vibrate(int ms){
+            runOnUiThread(()->{try{Vibrator v=(Vibrator)getSystemService(Context.VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){if(Build.VERSION.SDK_INT>=26)v.vibrate(android.os.VibrationEffect.createOneShot(Math.max(1,Math.min(1000,ms)),android.os.VibrationEffect.DEFAULT_AMPLITUDE));else v.vibrate(Math.max(1,Math.min(1000,ms)));}}catch(Exception ignored){}});
+        }
     }
 
     private void startNativeRecognition(){
