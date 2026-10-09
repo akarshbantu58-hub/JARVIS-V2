@@ -1,327 +1,59 @@
 package com.akarsh.jarvis;
 
 import android.Manifest;
-import android.app.Activity;
-import android.content.Intent;
-import android.content.ActivityNotFoundException;
-import android.os.BatteryManager;
-import android.os.Build;
-import android.os.Vibrator;
-import android.content.Context;
+import android.app.*;
+import android.os.*;
+import android.content.*;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Bundle;
-import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
-import android.webkit.GeolocationPermissions;
-import android.webkit.PermissionRequest;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.webkit.WebSettings;
-import android.webkit.JavascriptInterface;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.speech.*;
 import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
-import java.util.ArrayList;
-import java.util.Locale;
-import android.widget.FrameLayout;
-import androidx.annotation.NonNull;
-import java.io.InputStream;
+import android.view.*;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.*;
+import org.json.*;
+import java.net.*;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 public class MainActivity extends Activity {
-    private static final int REQ_PERMS=1001, FILE_CHOOSER=1002;
-    private WebView webView; private ValueCallback<Uri[]> fileCallback;
-    private GeolocationPermissions.Callback geoCallback; private String geoOrigin;
-    private PermissionRequest pendingWebPermission; private View customView;
-    private WebChromeClient.CustomViewCallback customViewCallback;
-    private TextToSpeech tts;
-    private SpeechRecognizer speechRecognizer;
-    private String pendingSpeechLocale="en-US";
-    private boolean nativeListening=false;
-
-    @Override protected void onCreate(Bundle savedInstanceState){
-        super.onCreate(savedInstanceState); requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
-        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        FrameLayout root=new FrameLayout(this); webView=new WebView(this);
-        root.addView(webView,new FrameLayout.LayoutParams(-1,-1)); setContentView(root);
-
-        WebSettings s=webView.getSettings();
-        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setDatabaseEnabled(true);
-        s.setAllowFileAccess(true); s.setAllowContentAccess(true); s.setMediaPlaybackRequiresUserGesture(false);
-        s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false); s.setSupportZoom(false);
-        s.setJavaScriptCanOpenWindowsAutomatically(true); s.setLoadsImagesAutomatically(true);
-        s.setGeolocationEnabled(true); s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        webView.addJavascriptInterface(new JarvisBridge(),"AndroidJARVIS");
-        webView.setWebViewClient(new WebViewClient(){
-            @Override public void onPageFinished(WebView v,String url){
-                super.onPageFinished(v,url);
-                v.evaluateJavascript("(function(){if(window.__jarvisNativeCommandsInstalled)return;window.__jarvisNativeCommandsInstalled=true;var old=window.sendVoiceQuery;if(typeof old==='function'){window.sendVoiceQuery=async function(t){var m=String(t||'').trim().match(/^(?:please\\s+)?(?:open|launch|start)\\s+(.+)$/i);if(m&&window.AndroidJARVIS&&window.AndroidJARVIS.openApp(m[1])){var box=document.getElementById('voiceTx');if(box)box.textContent='Opening '+m[1];var st=document.getElementById('voiceStat');if(st)st.textContent='COMMAND COMPLETE';try{window.AndroidJARVIS.speak('Opening '+m[1],1,1,1)}catch(e){}return;}return old(t);};}})();",null);
-            }
-            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest r){
-                Uri u=r.getUrl();
-                if("http".equalsIgnoreCase(u.getScheme())||"https".equalsIgnoreCase(u.getScheme())) return false;
-                try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception ignored){}
-                return true;
-            }
-        });
-        webView.setWebChromeClient(new WebChromeClient(){
-            @Override public void onPermissionRequest(final PermissionRequest r){runOnUiThread(()->{
-                boolean cam=false,aud=false;
-                for(String x:r.getResources()){
-                    if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)&&!has(Manifest.permission.CAMERA))cam=true;
-                    if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)&&!has(Manifest.permission.RECORD_AUDIO))aud=true;
-                }
-                if(!cam&&!aud){grantWebPermission(r);return;}
-                pendingWebPermission=r;
-                java.util.ArrayList<String> list=new java.util.ArrayList<>();
-                if(cam)list.add(Manifest.permission.CAMERA);
-                if(aud)list.add(Manifest.permission.RECORD_AUDIO);
-                requestPermissions(list.toArray(new String[0]),REQ_PERMS);
-            });}
-            @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback cb){
-                geoOrigin=origin;geoCallback=cb;
-                if(has(Manifest.permission.ACCESS_FINE_LOCATION)||has(Manifest.permission.ACCESS_COARSE_LOCATION))cb.invoke(origin,true,false);
-                else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},REQ_PERMS);
-            }
-            @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> cb,FileChooserParams params){
-                if(fileCallback!=null)fileCallback.onReceiveValue(null); fileCallback=cb;
-                Intent i=params.createIntent(); i.addCategory(Intent.CATEGORY_OPENABLE);
-                try{startActivityForResult(i,FILE_CHOOSER);}catch(Exception e){fileCallback=null;return false;}
-                return true;
-            }
-            @Override public void onShowCustomView(View v,CustomViewCallback cb){
-                if(customView!=null){cb.onCustomViewHidden();return;}
-                customView=v;customViewCallback=cb;setContentView(v);
-                getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            }
-            @Override public void onHideCustomView(){hideCustomView();}
-        });
-
-        initNativeVoice();
-        loadBundledHtml();
-    }
-
-    private void initNativeVoice(){
-        tts=new TextToSpeech(this,status->{
-            if(status==TextToSpeech.SUCCESS){
-                tts.setLanguage(Locale.getDefault());
-                tts.setOnUtteranceProgressListener(new UtteranceProgressListener(){
-                    @Override public void onStart(String id){}
-                    @Override public void onDone(String id){runOnUiThread(()->js("window.__nativeSpeakDone&&window.__nativeSpeakDone();"));}
-                    @Override public void onError(String id){runOnUiThread(()->js("window.__nativeSpeakDone&&window.__nativeSpeakDone();"));}
-                });
-            }
-        });
-        if(SpeechRecognizer.isRecognitionAvailable(this)){
-            speechRecognizer=SpeechRecognizer.createSpeechRecognizer(this);
-            speechRecognizer.setRecognitionListener(new RecognitionListener(){
-                @Override public void onReadyForSpeech(Bundle p){}
-                @Override public void onBeginningOfSpeech(){}
-                @Override public void onRmsChanged(float rms){}
-                @Override public void onBufferReceived(byte[] b){}
-                @Override public void onEndOfSpeech(){runOnUiThread(()->js("window.__nativeSpeechEnded&&window.__nativeSpeechEnded();"));}
-                @Override public void onResults(Bundle b){
-                    ArrayList<String> r=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if(r!=null&&!r.isEmpty())sendSpeech(r.get(0),true);
-                }
-                @Override public void onPartialResults(Bundle b){
-                    ArrayList<String> r=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if(r!=null&&!r.isEmpty())sendSpeech(r.get(0),false);
-                }
-                @Override public void onEvent(int t,Bundle p){}
-                @Override public void onError(int e){
-                    runOnUiThread(()->{
-                        js("window.__nativeSpeechError&&window.__nativeSpeechError("+quote(errorName(e))+");");
-                        js("window.__nativeSpeechEnded&&window.__nativeSpeechEnded();");
-                    });
-                }
-            });
-        }
-    }
-
-    private void sendSpeech(String text,boolean finalResult){js("window.__nativeSpeechResult&&window.__nativeSpeechResult("+quote(text)+","+finalResult+");");}
-    private String errorName(int e){
-        switch(e){
-            case SpeechRecognizer.ERROR_AUDIO:return "audio";
-            case SpeechRecognizer.ERROR_CLIENT:return "client";
-            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:return "permission";
-            case SpeechRecognizer.ERROR_NETWORK:return "network";
-            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:return "network_timeout";
-            case SpeechRecognizer.ERROR_NO_MATCH:return "no_match";
-            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:return "busy";
-            case SpeechRecognizer.ERROR_SERVER:return "server";
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:return "timeout";
-            default:return "error";
-        }
-    }
-    private String quote(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r")+"\"";}
-    private void js(String code){if(webView!=null)webView.post(()->webView.evaluateJavascript("javascript:"+code,null));}
-
-    private class JarvisBridge{
-        @JavascriptInterface public void speak(String text,float rate,float pitch,float volume){
-            runOnUiThread(()->{
-                if(tts==null)return;
-                tts.setSpeechRate(Math.max(.1f,Math.min(3f,rate)));
-                tts.setPitch(Math.max(.1f,Math.min(3f,pitch)));
-                Bundle p=new Bundle();
-                p.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME,Math.max(0f,Math.min(1f,volume)));
-                tts.speak(text,TextToSpeech.QUEUE_FLUSH,p,"jarvis-"+System.nanoTime());
-            });
-        }
-        @JavascriptInterface public void stopSpeaking(){runOnUiThread(()->{if(tts!=null)tts.stop();js("window.__nativeSpeakDone&&window.__nativeSpeakDone();");});}
-        @JavascriptInterface public void startListening(String locale){
-            runOnUiThread(()->{
-                pendingSpeechLocale=(locale==null||locale.isEmpty())?"en-US":locale;
-                nativeListening=true;
-                if(!has(Manifest.permission.RECORD_AUDIO)){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQ_PERMS);return;}
-                startNativeRecognition();
-            });
-        }
-        @JavascriptInterface public void stopListening(){runOnUiThread(()->{nativeListening=false;try{if(speechRecognizer!=null)speechRecognizer.stopListening();}catch(Exception ignored){}});}
-        @JavascriptInterface public boolean isAvailable(){return speechRecognizer!=null;}
-        @JavascriptInterface public boolean openApp(String requested){
-            if(requested==null)return false;
-            String n=requested.toLowerCase(Locale.ROOT).trim();
-            String pkg=null;
-            if(n.contains("youtube"))pkg="com.google.android.youtube";
-            else if(n.contains("chrome")||n.contains("browser"))pkg="com.android.chrome";
-            else if(n.contains("camera")){startActivity(new Intent("android.media.action.IMAGE_CAPTURE"));return true;}
-            else if(n.contains("settings")){startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));return true;}
-            else if(n.contains("calculator"))pkg="com.google.android.calculator";
-            else if(n.contains("play store"))pkg="com.android.vending";
-            else if(n.contains("gmail")||n.equals("mail"))pkg="com.google.android.gm";
-            else if(n.contains("maps"))pkg="com.google.android.apps.maps";
-            else if(n.contains("photos"))pkg="com.google.android.apps.photos";
-            else if(n.contains("whatsapp"))pkg="com.whatsapp";
-            else if(n.contains("spotify"))pkg="com.spotify.music";
-            else if(n.contains("clock")||n.contains("alarm"))pkg="com.google.android.deskclock";
-            else if(n.contains("files")||n.contains("my files")){startActivity(new Intent(Intent.ACTION_GET_CONTENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE));return true;}
-            if(pkg==null)return false;
-            try{
-                Intent launch=getPackageManager().getLaunchIntentForPackage(pkg);
-                if(launch==null)return false;
-                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(launch);return true;
-            }catch(Exception e){return false;}
-        }
-        @JavascriptInterface public void openSettings(){runOnUiThread(()->startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)));}
-        @JavascriptInterface public String getDeviceInfo(){
-            return Build.MANUFACTURER+" "+Build.MODEL+"; Android "+Build.VERSION.RELEASE+"; SDK "+Build.VERSION.SDK_INT;
-        }
-        @JavascriptInterface public void shareText(String text){
-            runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,text);startActivity(Intent.createChooser(i,"Share with"));});
-        }
-        @JavascriptInterface public void vibrate(int ms){
-            runOnUiThread(()->{try{Vibrator v=(Vibrator)getSystemService(Context.VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){if(Build.VERSION.SDK_INT>=26)v.vibrate(android.os.VibrationEffect.createOneShot(Math.max(1,Math.min(1000,ms)),android.os.VibrationEffect.DEFAULT_AMPLITUDE));else v.vibrate(Math.max(1,Math.min(1000,ms)));}}catch(Exception ignored){}});
-        }
-    }
-
-    private void startNativeRecognition(){
-        if(speechRecognizer==null){js("window.__nativeSpeechError&&window.__nativeSpeechError('unavailable');");return;}
-        try{
-            speechRecognizer.stopListening();
-            Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,pendingSpeechLocale);
-            i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);
-            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
-            speechRecognizer.startListening(i);
-        }catch(Exception e){js("window.__nativeSpeechError&&window.__nativeSpeechError("+quote(e.getMessage()==null?"start_failed":e.getMessage())+");");}
-    }
-
-    private void loadBundledHtml(){
-        try(InputStream in=getAssets().open("J.A.R.V.I.S.html")){
-            byte[] data=new byte[in.available()];
-            int offset=0,n;
-            while(offset<data.length&&(n=in.read(data,offset,data.length-offset))>0)offset+=n;
-            String html=new String(data,0,offset,StandardCharsets.UTF_8);
-            webView.loadDataWithBaseURL(
-                "https://appassets.androidplatform.net/assets/",
-                html,
-                "text/html",
-                "UTF-8",
-                null
-            );
-        }catch(Exception e){
-            webView.loadDataWithBaseURL(
-                "https://appassets.androidplatform.net/assets/",
-                "<html><body style='background:#000;color:#fff;font-family:sans-serif;padding:24px'><h2>JARVIS failed to load</h2><p>"+escapeHtml(e.toString())+"</p></body></html>",
-                "text/html",
-                "UTF-8",
-                null
-            );
-        }
-    }
-
-    private String escapeHtml(String s){
-        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");
-    }
-
-    private boolean has(String p){return checkSelfPermission(p)==PackageManager.PERMISSION_GRANTED;}
-
-    private void grantWebPermission(PermissionRequest r){
-        java.util.ArrayList<String> a=new java.util.ArrayList<>();
-        for(String x:r.getResources()){
-            if(PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)&&has(Manifest.permission.CAMERA))a.add(x);
-            if(PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)&&has(Manifest.permission.RECORD_AUDIO))a.add(x);
-        }
-        if(!a.isEmpty())r.grant(a.toArray(new String[0]));else r.deny();
-        pendingWebPermission=null;
-    }
-
-    @Override public void onRequestPermissionsResult(int c,@NonNull String[] p,@NonNull int[] g){
-        super.onRequestPermissionsResult(c,p,g);
-        if(c==REQ_PERMS){
-            if(pendingWebPermission!=null)grantWebPermission(pendingWebPermission);
-            if(has(Manifest.permission.RECORD_AUDIO)&&nativeListening)startNativeRecognition();
-            if(geoCallback!=null&&(has(Manifest.permission.ACCESS_FINE_LOCATION)||has(Manifest.permission.ACCESS_COARSE_LOCATION))){
-                geoCallback.invoke(geoOrigin,true,false);geoCallback=null;geoOrigin=null;
-            }
-        }
-    }
-
-    @Override protected void onActivityResult(int c,int r,Intent d){
-        super.onActivityResult(c,r,d);
-        if(c==FILE_CHOOSER&&fileCallback!=null){
-            Uri[] out=null;
-            if(r==RESULT_OK&&d!=null){
-                if(d.getClipData()!=null){
-                    int n=d.getClipData().getItemCount();out=new Uri[n];
-                    for(int i=0;i<n;i++)out[i]=d.getClipData().getItemAt(i).getUri();
-                }else if(d.getData()!=null)out=new Uri[]{d.getData()};
-            }
-            fileCallback.onReceiveValue(out);fileCallback=null;
-        }
-    }
-
-    private void hideCustomView(){
-        if(customView==null)return;
-        customView=null;
-        if(customViewCallback!=null)customViewCallback.onCustomViewHidden();
-        customViewCallback=null;
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        FrameLayout root=new FrameLayout(this);
-        root.addView(webView,new FrameLayout.LayoutParams(-1,-1));
-        setContentView(root);
-    }
-
-    @Override public void onBackPressed(){
-        if(customView!=null){hideCustomView();return;}
-        if(webView.canGoBack())webView.goBack();else super.onBackPressed();
-    }
-
-    @Override protected void onDestroy(){
-        nativeListening=false;
-        if(speechRecognizer!=null)speechRecognizer.destroy();
-        if(tts!=null)tts.shutdown();
-        if(webView!=null)webView.destroy();
-        super.onDestroy();
-    }
+  final int BG=Color.rgb(5,8,18), PANEL=Color.rgb(14,20,36), CYAN=Color.rgb(0,235,255), WHITE=Color.rgb(235,245,255), MUTED=Color.rgb(137,157,183), PURPLE=Color.rgb(137,93,255);
+  LinearLayout root, body, header; TextView status, title; EditText composer; ScrollView chatScroll; LinearLayout messages;
+  TextToSpeech tts; SpeechRecognizer recognizer; boolean listening=false; String apiKey=""; android.content.SharedPreferences prefs;
+  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);prefs=getSharedPreferences("jarvis",0);apiKey=prefs.getString("gemini_key","");tts=new TextToSpeech(this,s->{if(s==TextToSpeech.SUCCESS)tts.setLanguage(Locale.US);});if(SpeechRecognizer.isRecognitionAvailable(this)){recognizer=SpeechRecognizer.createSpeechRecognizer(this);recognizer.setRecognitionListener(new RecognitionListener(){public void onReadyForSpeech(Bundle p){listening=true;status.setText("LISTENING · SPEAK NOW");}public void onBeginningOfSpeech(){}public void onRmsChanged(float r){}public void onBufferReceived(byte[] b){}public void onEndOfSpeech(){listening=false;status.setText("PROCESSING");}public void onError(int e){listening=false;status.setText("VOICE READY · TAP MIC");}public void onResults(Bundle b){listening=false;ArrayList<String>a=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);if(a!=null&&!a.isEmpty()){composer.setText(a.get(0));sendMessage();}}public void onPartialResults(Bundle b){}public void onEvent(int t,Bundle p){}});}buildUi();welcome();}
+  GradientDrawable shape(int color,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(radius);if(stroke!=0)d.setStroke(1,stroke);return d;}
+  TextView text(String s,int size,int color,boolean bold){TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);v.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));return v;}
+  LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(1);return l;}
+  LinearLayout row(){LinearLayout l=new LinearLayout(this);l.setOrientation(0);l.setGravity(Gravity.CENTER_VERTICAL);return l;}
+  void pad(View v,int a){v.setPadding(a,a,a,a);}
+  TextView button(String label,Runnable action){TextView v=text(label,14,CYAN,true);v.setGravity(Gravity.CENTER);v.setPadding(14,13,14,13);v.setBackground(shape(PANEL,CYAN,22));v.setOnClickListener(w->action.run());return v;}
+  void buildUi(){
+    root=column();root.setBackgroundColor(BG);setContentView(root);
+    header=column();header.setPadding(20,18,20,12);root.addView(header);
+    LinearLayout top=row();TextView orb=text("◉",30,CYAN,true);top.addView(orb);LinearLayout names=column();names.setPadding(12,0,0,0);names.addView(text("J.A.R.V.I.S",20,WHITE,true));names.addView(text("PERSONAL INTELLIGENCE SYSTEM",9,MUTED,true));top.addView(names,new LinearLayout.LayoutParams(0,-2,1));top.addView(button("⚙",()->settings()));header.addView(top);
+    status=text("● SYSTEM ONLINE  ·  NATIVE ANDROID",10,CYAN,true);status.setPadding(4,12,0,0);header.addView(status);
+    View line=new View(this);line.setBackgroundColor(Color.rgb(29,48,72));root.addView(line,new LinearLayout.LayoutParams(-1,1));
+    FrameLayout frame=new FrameLayout(this);root.addView(frame,new LinearLayout.LayoutParams(-1,0,1));body=column();body.setPadding(18,16,18,10);frame.addView(body);
+    LinearLayout nav=row();nav.setPadding(8,8,8,8);nav.setBackground(shape(PANEL,Color.rgb(31,54,80),28));String[] tabs={"HOME","CHAT","VOICE","CAMERA","TOOLS"};for(String t:tabs){TextView b=text(t,10,t.equals("HOME")?CYAN:MUTED,true);b.setGravity(Gravity.CENTER);nav.addView(b,new LinearLayout.LayoutParams(0,46,1));b.setOnClickListener(v->showTab(t));}root.addView(nav);
+    showTab("HOME");
+  }
+  void showTab(String tab){body.removeAllViews();if(tab.equals("HOME")){TextView hero=text("GOOD DAY.\nI'M JARVIS.",30,WHITE,true);hero.setPadding(0,20,0,8);body.addView(hero);body.addView(text("Your native Android assistant is ready.",14,MUTED,false));TextView ring=text("◉",94,CYAN,true);ring.setGravity(Gravity.CENTER);ring.setPadding(0,24,0,18);body.addView(ring,new LinearLayout.LayoutParams(-1,-2));body.addView(text("SYSTEM STATUS",11,MUTED,true));body.addView(text("All local interface systems operational",15,WHITE,false));LinearLayout r=row();r.setPadding(0,18,0,0);r.addView(button("ASK JARVIS",()->showTab("CHAT")),new LinearLayout.LayoutParams(0,-2,1));Space sp=new Space(this);r.addView(sp,new LinearLayout.LayoutParams(10,1));r.addView(button("VOICE MODE",()->showTab("VOICE")),new LinearLayout.LayoutParams(0,-2,1));body.addView(r);body.addView(text("\nQUICK ACTIONS",11,MUTED,true));body.addView(button("Open YouTube",()->openApp("youtube")),new LinearLayout.LayoutParams(-1,-2));body.addView(button("Device settings",()->startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS))),new LinearLayout.LayoutParams(-1,-2));}
+    else if(tab.equals("CHAT")){body.addView(text("ASK ANYTHING",23,WHITE,true));body.addView(text("Gemini API supported · add your key in ⚙",12,MUTED,false));chatScroll=new ScrollView(this);messages=column();messages.setPadding(0,16,0,16);chatScroll.addView(messages);body.addView(chatScroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout input=row();composer=new EditText(this);composer.setSingleLine(false);composer.setMaxLines(3);composer.setHint("Message JARVIS…");composer.setTextColor(WHITE);composer.setHintTextColor(MUTED);composer.setPadding(14,10,14,10);composer.setBackground(shape(PANEL,Color.rgb(36,57,83),20));input.addView(composer,new LinearLayout.LayoutParams(0,-2,1));TextView send=button("SEND",()->sendMessage());LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-2,-2);bp.setMargins(8,0,0,0);input.addView(send,bp);body.addView(input);if(messages.getChildCount()==0)addBubble("JARVIS","Hello. I'm ready. Configure a Gemini API key in settings to enable AI responses.");}
+    else if(tab.equals("VOICE")){body.addView(text("VOICE INTERFACE",24,WHITE,true));TextView orb=text("◉",110,CYAN,true);orb.setGravity(Gravity.CENTER);body.addView(orb,new LinearLayout.LayoutParams(-1,0,1));body.addView(text("Tap the microphone and speak a command.",14,MUTED,false));body.addView(button("🎙  START LISTENING",()->startListening()),new LinearLayout.LayoutParams(-1,-2));body.addView(button("STOP SPEAKING",()->{if(tts!=null)tts.stop();status.setText("VOICE READY");}),new LinearLayout.LayoutParams(-1,-2));body.addView(button("Configure AI key",()->settings()),new LinearLayout.LayoutParams(-1,-2));}
+    else if(tab.equals("CAMERA")){body.addView(text("CAMERA",24,WHITE,true));body.addView(text("Launch the tablet camera using Android's native camera app.",14,MUTED,false));TextView icon=text("▣",100,CYAN,true);icon.setGravity(Gravity.CENTER);body.addView(icon,new LinearLayout.LayoutParams(-1,0,1));body.addView(button("OPEN CAMERA",()->{try{startActivity(new Intent("android.media.action.IMAGE_CAPTURE"));}catch(Exception e){toast("No camera app found");}}),new LinearLayout.LayoutParams(-1,-2));}
+    else {body.addView(text("DEVICE TOOLS",24,WHITE,true));String[][] a={{"YouTube","youtube"},{"Chrome / Browser","browser"},{"Camera","camera"},{"Maps","maps"},{"Photos","photos"},{"WhatsApp","whatsapp"},{"Spotify","spotify"},{"Calculator","calculator"},{"Clock","clock"},{"Settings","settings"},{"Share text","share"}};for(String[] q:a){TextView v=text("↗   "+q[0],15,WHITE,true);v.setPadding(15,15,10,15);v.setBackground(shape(PANEL,Color.rgb(30,50,76),18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,7);body.addView(v,p);v.setOnClickListener(w->{if(q[1].equals("share")){Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,"Hello from JARVIS");startActivity(Intent.createChooser(i,"Share"));}else openApp(q[1]);});}}
+  }
+  void welcome(){}
+  void addBubble(String who,String msg){if(messages==null)return;TextView v=text(who+"\n"+msg,14,who.equals("YOU")?CYAN:WHITE,false);v.setPadding(15,13,15,13);v.setBackground(shape(PANEL,Color.rgb(32,53,79),18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,10);messages.addView(v,p);if(chatScroll!=null)chatScroll.post(()->chatScroll.fullScroll(View.FOCUS_DOWN));}
+  void sendMessage(){if(composer==null)return;String q=composer.getText().toString().trim();if(q.isEmpty())return;composer.setText("");addBubble("YOU",q);String low=q.toLowerCase(Locale.ROOT);if(low.matches("(?s).*(open|launch|start) youtube.*")){openApp("youtube");addBubble("JARVIS","Opening YouTube.");speak("Opening YouTube.");return;}if(low.matches("(?s).*(open|launch|start) camera.*")){openApp("camera");addBubble("JARVIS","Opening camera.");return;}if(low.matches("(?s).*(open|launch|start) settings.*")){openApp("settings");addBubble("JARVIS","Opening settings.");return;}if(apiKey.isEmpty()){addBubble("JARVIS","Add your Gemini API key using the ⚙ settings button to enable AI chat. Device tools work without a key.");return;}addBubble("JARVIS","Thinking…");final String prompt=q;new Thread(()->{String answer;try{URL u=new URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+apiKey);HttpURLConnection c=(HttpURLConnection)u.openConnection();c.setRequestMethod("POST");c.setConnectTimeout(15000);c.setReadTimeout(30000);c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");JSONObject part=new JSONObject().put("text","You are JARVIS, a helpful concise Android assistant. Be clear about limitations and never claim to control device features you cannot access. User: "+prompt);JSONObject payload=new JSONObject().put("contents",new JSONArray().put(new JSONObject().put("parts",new JSONArray().put(part))));try(OutputStream os=c.getOutputStream()){os.write(payload.toString().getBytes(StandardCharsets.UTF_8));}InputStream is=(c.getResponseCode()<400)?c.getInputStream():c.getErrorStream();ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=is.read(buf))>0)out.write(buf,0,n);JSONObject result=new JSONObject(out.toString("UTF-8"));answer=result.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text");c.disconnect();}catch(Exception e){answer="I couldn't get an AI response. Check your internet connection and Gemini API key. ("+e.getClass().getSimpleName()+")";}final String res=answer;runOnUiThread(()->{if(messages!=null){addBubble("JARVIS",res);speak(res);}});}).start();}
+  void settings(){EditText key=new EditText(this);key.setSingleLine(true);key.setHint("Paste Gemini API key");key.setText(apiKey);key.setInputType(129);new AlertDialog.Builder(this).setTitle("JARVIS SETTINGS").setMessage("Gemini key is stored on this device only. Get a key from Google AI Studio.").setView(key).setPositiveButton("SAVE",(d,w)->{apiKey=key.getText().toString().trim();prefs.edit().putString("gemini_key",apiKey).apply();toast(apiKey.isEmpty()?"AI key cleared":"API key saved on device");}).setNeutralButton("TEST VOICE",(d,w)->speak("JARVIS voice system is online.")).setNegativeButton("CANCEL",null).show();}
+  void speak(String s){if(tts!=null)tts.speak(s,TextToSpeech.QUEUE_FLUSH,null,"jarvis");}
+  void startListening(){if(recognizer==null){toast("Speech recognition is unavailable on this device");return;}if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},22);return;}Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"en-IN");i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);try{recognizer.startListening(i);}catch(Exception e){toast("Could not start microphone");}}
+  void openApp(String name){String n=name.toLowerCase(Locale.ROOT);if(n.contains("camera")){try{startActivity(new Intent("android.media.action.IMAGE_CAPTURE"));}catch(Exception e){toast("Camera unavailable");}return;}if(n.contains("settings")){startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));return;}String pkg=n.contains("youtube")?"com.google.android.youtube":n.contains("browser")||n.contains("chrome")?"com.android.chrome":n.contains("maps")?"com.google.android.apps.maps":n.contains("photos")?"com.google.android.apps.photos":n.contains("whatsapp")?"com.whatsapp":n.contains("spotify")?"com.spotify.music":n.contains("calculator")?"com.google.android.calculator":n.contains("clock")?"com.google.android.deskclock":"";try{Intent i=pkg.isEmpty()?new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://www.google.com")):getPackageManager().getLaunchIntentForPackage(pkg);if(i==null)i=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(n.contains("youtube")?"https://youtube.com":"https://www.google.com"));startActivity(i);}catch(Exception e){toast("Unable to open "+name);}}
+  void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  @Override public void onRequestPermissionsResult(int r,String[] p,int[] g){super.onRequestPermissionsResult(r,p,g);if(r==22&&g.length>0&&g[0]==PackageManager.PERMISSION_GRANTED)startListening();}
+  @Override public void onDestroy(){if(recognizer!=null)recognizer.destroy();if(tts!=null)tts.shutdown();super.onDestroy();}
 }
