@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <queries>
         <package android:name="com.google.android.youtube" />
         <package android:name="com.android.chrome" />
         <package android:name="com.google.android.calculator" />
-        <package android:name="com.android.vending" />
         <package android:name="com.google.android.gm" />
         <package android:name="com.google.android.apps.maps" />
         <package android:name="com.google.android.apps.photos" />
@@ -13,13 +17,19 @@
         <package android:name="com.spotify.music" />
         <package android:name="com.google.android.deskclock" />
     </queries>
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <application android:allowBackup="true" android:hardwareAccelerated="true" android:icon="@android:drawable/ic_dialog_info" android:label="J.A.R.V.I.S" android:supportsRtl="true" android:theme="@style/AppTheme" android:usesCleartextTraffic="false">
-        <activity android:name=".MainActivity" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout" android:exported="true" android:screenOrientation="fullSensor">
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:label="J.A.R.V.I.S"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="false">
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:exported="true"
+            android:screenOrientation="fullSensor"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
