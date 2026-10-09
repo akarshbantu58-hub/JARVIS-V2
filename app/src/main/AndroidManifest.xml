@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <queries>
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.android.chrome" />
+        <package android:name="com.google.android.calculator" />
+        <package android:name="com.android.vending" />
+        <package android:name="com.google.android.gm" />
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.google.android.apps.photos" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.google.android.deskclock" />
+    </queries>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
